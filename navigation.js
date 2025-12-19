@@ -236,7 +236,7 @@ let db;
             <header class="auth-navbar">
                 <nav>
                     <a href="/" class="flex items-center space-x-2 flex-shrink-0 overflow-hidden relative">
-                        <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto" id="navbar-logo">
+                        <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto max-w-[100px]" id="navbar-logo">
                     </a>
                     <div class="tab-wrapper">
                         <div class="tab-scroll-container flex justify-center items-center overflow-hidden">

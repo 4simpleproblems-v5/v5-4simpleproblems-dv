@@ -374,12 +374,12 @@
         function setupAuthAndLoad() {
             try {
                 onAuthStateChanged(auth, (user) => {
-                    if (user) {
+                    if (user || window._LOCAL_MODE) {
                         loadingScreen.style.display = 'none';
                         pageContent.classList.remove('hidden');
                         loadSoundsLocal();
                         monitorExplicitSettings();
-                    } else {
+                    } else if (!window._LOCAL_MODE) {
                         window.location.href = '../index.html'; 
                     }
                 });

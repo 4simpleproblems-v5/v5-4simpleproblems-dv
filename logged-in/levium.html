@@ -62,17 +62,15 @@
         const pageContent = document.getElementById('page-content');
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // User is signed in, check admin status
-                const isAdmin = await checkAdminStatus(user.uid);
-                if (isAdmin) {
-                    pageContent.style.display = 'flex'; // Show content for admins
+            if (user || window._LOCAL_MODE) {
+                // User is signed in or in local mode
+                const isAdmin = user ? await checkAdminStatus(user.uid) : true; // Assume admin in local mode for these tools
+                if (isAdmin || window._LOCAL_MODE) {
+                    pageContent.style.display = 'flex'; 
                 } else {
-                    // Not an admin, redirect to dashboard
                     window.location.href = '../logged-in/dashboard.html';
                 }
-            } else {
-                // User is signed out, redirect to authentication page
+            } else if (!window._LOCAL_MODE) {
                 window.location.href = '../authentication.html';
             }
         });

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4SP - GENERATE ACCESS CODE</title>
-    <meta name="description" content="Generate your unique access code for the 4SP Client.">
+    <title>4SP - AUTHENTICATION</title>
+    <meta name="description" content="Log into or create your 4SP account to access the student toolkit.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,16 +12,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Unified Tailwind CSS configuration for a consistent dark theme
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'custom-darkest-gray': '#040404',
-                        'custom-dark-gray': '#111111',
-                        'custom-medium-gray': '#252525',
-                        'custom-light-gray': '#505050',
-                        'custom-lighter-gray': '#808080',
-                        'custom-white-gray': '#c0c0c0',
+                        'custom-darkest-gray': '#040404', // Body background
+                        'custom-dark-gray': '#111111',    // Form container background
+                        'custom-medium-gray': '#252525', // Borders, inputs, buttons
+                        'custom-light-gray': '#505050',  // Labels and secondary text
+                        'custom-lighter-gray': '#808080', // Hover states and subtle text
+                        'custom-white-gray': '#c0c0c0',  // Main text and headings
                     }
                 }
             }
@@ -30,30 +31,49 @@
     
     <style>
         :root {
-            --geist-foreground: 192, 192, 192;
-            --geist-background: 7, 7, 7;
+            --geist-foreground: 192, 192, 192; /* custom-white-gray */
+            --geist-background: 7, 7, 7;       /* custom-darkest-gray */
         }
 
         body {
             font-family: 'Geist', sans-serif;
             background-color: rgb(var(--geist-background));
             color: rgb(var(--geist-foreground));
-            font-weight: 300;
+            transition: all 0.3s ease;
+            font-weight: 300; /* CUSTOM: Lighter base font weight */
         }
 
+        /* CUSTOM: Lighter bold/headings to match notes.html */
         h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-tighter {
             font-weight: 400 !important;
         }
+
+        .btn-social {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .btn-social:hover {
+            /* Keep existing hover effect for social buttons */
+            background-color: rgba(37, 37, 37, 0.7); /* custom-medium-gray with transparency */
+            border-color: #383838;
+        }
         
         .message-area { min-height: 20px; }
-        .error-message { color: #f87171; }
-        .success-message { color: #4ade80; }
+        .error-message { color: #f87171; font-weight: 400; /* Match new heading weight */ }
+        .success-message { color: #4ade80; font-weight: 400; }
+        .warning-message { color: #fbbf24; font-weight: 400; }
         
+        .auth-split-container { max-width: 1200px; margin: 0 auto; }
+        @media (min-width: 768px) { .auth-col { } }
+        @media (max-width: 767px) {
+            .right-col { display: none; }
+            .left-col { border-right: none; }
+        }
+
         .code-display {
             font-family: monospace;
             letter-spacing: 0.2em;
             font-size: 1.5rem;
-            background: #111;
+            background: #000;
             border: 1px solid #333;
             padding: 1rem;
             border-radius: 0.5rem;
@@ -64,38 +84,101 @@
         }
     </style>
 </head>
-<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-custom-darkest-gray text-custom-white-gray min-h-screen flex flex-col">
 
-    <main class="w-full max-w-md bg-custom-dark-gray p-8 rounded-2xl border border-custom-medium-gray shadow-2xl">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl text-white mb-2 tracking-tighter">Get Access Code</h1>
-            <p class="text-custom-light-gray text-sm">Generate a unique code to unlock your 4SP Client.</p>
-        </div>
+    <main class="flex-grow flex items-stretch justify-center p-0">
+        <div class="auth-split-container bg-custom-darkest-gray flex flex-wrap w-full border-0 overflow-hidden p-0">
+            <div class="auth-col left-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray min-w-[300px]">
 
-        <div id="generatorContainer" class="flex flex-col items-center">
-            <button id="generateBtn" class="w-full p-4 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-indigo-600 hover:bg-indigo-700 transition mb-6">
-                GENERATE CODE
-            </button>
+                <div id="loginContainer" class="w-full flex flex-col items-center">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Access Code Generator</h2>
+                    <div id="unauthenticatedView" class="w-full max-w-md">
+                        <p class="text-custom-light-gray text-center mb-8">Sign in to generate a unique access code for your 4SP Client.</p>
+                        <div class="message-area w-full mt-4 text-center text-sm text-gray-500">Please use the provider login on the right.</div>
+                    </div>
 
-            <div id="resultContainer" class="w-full hidden flex-col items-center animate-fade-in">
-                <div class="code-display" id="codeOutput">XXXX-XXXX-XXXX</div>
-                <button id="copyBtn" class="w-full p-3 text-base rounded-xl font-normal border border-custom-medium-gray text-custom-white-gray hover:bg-custom-medium-gray transition flex items-center justify-center gap-2">
-                    <i class="fa-regular fa-copy"></i> Copy to Clipboard
-                </button>
-                <div id="messageArea" class="message-area mt-4 text-center text-sm"></div>
+                    <div id="authenticatedView" class="w-full max-w-md hidden">
+                        <p class="text-custom-light-gray text-center mb-6">You are signed in as <span id="userEmail" class="text-white font-medium">...</span></p>
+                        
+                        <div id="generatorBox" class="flex flex-col items-center">
+                            <button id="generateBtn" class="w-full p-4 text-lg rounded-xl font-normal ring-1 ring-white/20 text-white bg-indigo-600 hover:bg-indigo-700 transition mb-6">
+                                GENERATE CODE
+                            </button>
+
+                            <div id="resultContainer" class="w-full hidden flex-col items-center">
+                                <div class="code-display" id="codeOutput">XXXX-XXXX-XXXX</div>
+                                <button id="copyBtn" class="w-full p-3 text-base rounded-xl font-normal border border-custom-medium-gray text-custom-white-gray hover:bg-custom-medium-gray transition flex items-center justify-center gap-2">
+                                    <i class="fa-regular fa-copy"></i> Copy to Clipboard
+                                </button>
+                            </div>
+                        </div>
+                        <div id="messageArea" class="message-area mt-4 text-center text-sm"></div>
+                        <button id="logoutBtn" class="mt-8 text-custom-light-gray hover:text-white text-sm transition underline underline-offset-4">Sign Out</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="auth-col right-col flex-1 p-8 flex flex-col justify-center items-center bg-custom-darkest-gray">
+                <div class="w-full flex flex-col items-center justify-center">
+                    <h2 class="text-3xl font-normal text-custom-white-gray mb-6 text-center w-full tracking-tighter">Continue instantly</h2>
+                    <p class="text-lg text-custom-light-gray mb-8 text-center max-w-md font-normal">
+                        Use a trusted provider to sign in or create an account in one click.
+                    </p>
+                    
+                    <button id="googleAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/4simpleproblems-v5.github.io@main/images/google-icon.png" alt="Google Logo" class="w-6 h-6 mr-3">
+                        Continue with Google
+                    </button>
+                    <button id="microsoftAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/4simpleproblems-v5.github.io@main/images/microsoft.png" alt="Microsoft Logo" class="w-6 h-6 mr-3">
+                        Continue with Microsoft
+                    </button>
+                    <button id="githubAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/4simpleproblems-v5.github.io@main/images/github-mark-white.png" alt="GitHub Logo" class="w-6 h-6 mr-3">
+                        Continue with GitHub
+                    </button>
+                    
+                    <button id="twitterAuthBtn" class="btn-social flex items-center justify-center w-full max-w-md p-3 bg-custom-dark-gray text-custom-white-gray border border-custom-medium-gray rounded-xl font-normal cursor-pointer mb-3">
+                        <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/4simpleproblems-v5.github.io@main/images/x.png" alt="X Logo" class="w-6 h-6 mr-3">
+                        Continue with X
+                    </button>
+
+                    <p class="text-xs italic text-custom-light-gray text-center max-w-md mt-4 leading-relaxed font-light">
+                        By continuing, you agree to our 
+                        <a href="../legal.html#terms-of-service" target="_blank" class="text-white hover:text-gray-300 font-normal">Terms of Service</a> and 
+                        <a href="../legal.html#privacy-policy" target="_blank" class="text-white hover:text-gray-300 font-normal">Privacy Policy</a>.
+                    </p>
+                </div>
             </div>
         </div>
     </main>
 
-    <footer class="mt-8 text-custom-light-gray text-xs">
-        &copy; 2025 4simpleproblems.
+    <footer class="border-t border-gray-900 py-6">
+        <div class="mx-auto max-w-7xl px-4 text-center text-gray-500 text-sm">
+            &copy; 2025 4simpleproblems (4SP). Built for students.
+        </div>
     </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            signOut,
+            GoogleAuthProvider,
+            GithubAuthProvider,
+            TwitterAuthProvider,
+            OAuthProvider,
+            signInWithPopup
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // Configuration from original project
         const firebaseConfig = {
             apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
             authDomain: "project-zirconium.firebaseapp.com",
@@ -107,13 +190,46 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
+        const unauthView = document.getElementById('unauthenticatedView');
+        const authView = document.getElementById('authenticatedView');
+        const userEmailSpan = document.getElementById('userEmail');
         const generateBtn = document.getElementById('generateBtn');
         const resultContainer = document.getElementById('resultContainer');
         const codeOutput = document.getElementById('codeOutput');
         const copyBtn = document.getElementById('copyBtn');
         const messageArea = document.getElementById('messageArea');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                unauthView.classList.add('hidden');
+                authView.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+            } else {
+                unauthView.classList.remove('hidden');
+                authView.classList.add('hidden');
+                resultContainer.classList.add('hidden');
+                generateBtn.classList.remove('hidden');
+            }
+        });
+
+        async function handleSocialAuth(provider) {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Auth error:", error);
+                alert("Authentication failed.");
+            }
+        }
+
+        document.getElementById('googleAuthBtn').addEventListener('click', () => handleSocialAuth(new GoogleAuthProvider()));
+        document.getElementById('githubAuthBtn').addEventListener('click', () => handleSocialAuth(new GithubAuthProvider()));
+        document.getElementById('twitterAuthBtn').addEventListener('click', () => handleSocialAuth(new TwitterAuthProvider()));
+        document.getElementById('microsoftAuthBtn').addEventListener('click', () => handleSocialAuth(new OAuthProvider('microsoft.com')));
+        logoutBtn.addEventListener('click', () => signOut(auth));
 
         function generateRandomCode() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -121,7 +237,7 @@
             for (let i = 0; i < 12; i++) {
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
-            return result; // 12 chars continuous
+            return result;
         }
 
         generateBtn.addEventListener('click', async () => {
@@ -129,14 +245,14 @@
             generateBtn.innerText = "Generating...";
             
             const rawCode = generateRandomCode();
-            // Format for display: XXXX-XXXX-XXXX
             const formattedCode = rawCode.match(/.{1,4}/g).join('-');
 
             try {
-                // Save to Firestore
                 await setDoc(doc(db, "access_codes", rawCode), {
                     active: true,
                     claimed: false,
+                    ownerEmail: auth.currentUser.email,
+                    ownerUid: auth.currentUser.uid,
                     createdAt: serverTimestamp()
                 });
 
@@ -147,27 +263,20 @@
                 
             } catch (e) {
                 console.error("Error creating code:", e);
-                alert("Failed to generate code. Please try again.");
+                alert("Failed to generate code.");
                 generateBtn.disabled = false;
                 generateBtn.innerText = "GENERATE CODE";
             }
         });
 
         copyBtn.addEventListener('click', () => {
-            const code = codeOutput.innerText; // Copy the formatted version or raw? User said "code is 12 chars".
-            // The display is XXXX-XXXX-XXXX (14 chars).
-            // But the user prompt says "code is 12 chars... all uppercase...". 
-            // I'll copy the RAW code (without hyphens) or with?
-            // "input the code they got". Usually easier to read with hyphens.
-            // I'll copy the text exactly as displayed.
-            // And I'll strip hyphens when validating in the client.
+            const code = codeOutput.innerText;
             navigator.clipboard.writeText(code).then(() => {
                 messageArea.innerText = "Copied to clipboard!";
                 messageArea.className = "message-area mt-4 text-center text-sm success-message";
                 setTimeout(() => messageArea.innerText = "", 3000);
             });
         });
-
     </script>
 </body>
 </html>

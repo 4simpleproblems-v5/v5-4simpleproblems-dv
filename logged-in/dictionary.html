@@ -585,15 +585,14 @@
         }
 
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                loadingScreen.style.opacity = '0';
+            if (user || window._LOCAL_MODE) {
+                loadingScreen.classList.add('fade-out');
                 setTimeout(() => {
                     loadingScreen.style.display = 'none';
                     pageContent.classList.remove('hidden');
-                    pageContent.style.display = 'flex'; 
-                    checkUrlHashForWord(); 
-                }, 300);
-            } else {
+                    pageContent.classList.add('fade-in');
+                }, 500);
+            } else if (!window._LOCAL_MODE) {
                 window.location.href = '../index.html'; 
             }
         });

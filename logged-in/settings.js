@@ -4185,16 +4185,13 @@ const performAccountDeletion = async (credential) => {
 
         function initializeAuth() {
             onAuthStateChanged(auth, async (user) => {
-                if (!user) {
-                    // No user is logged in, redirect to authentication.html (path corrected)
-                    window.location.href = '../authentication.html'; 
-                } else {
-                    currentUser = user; 
+                if (user || window._LOCAL_MODE) {
+                    currentUser = user || { uid: 'client-user', email: 'client@4sp' }; 
                     
                     // --- MODIFIED: Mandatory Admin Status Check ---
                     // We MUST await this check before proceeding to load tabs that might require admin privileges.
                     // This prevents "Missing or insufficient permissions" errors due to race conditions.
-                    isUserAdmin = await checkAdminStatus(user.uid);
+                    isUserAdmin = user ? await checkAdminStatus(user.uid) : false;
 
                     if (isUserAdmin) {
                         const adminTab = document.getElementById('tab-management');
@@ -4203,6 +4200,9 @@ const performAccountDeletion = async (credential) => {
 
                     // Set initial state to 'General' (or the first tab)
                     switchTab('general'); 
+                } else {
+                    // No user is logged in, redirect to authentication.html (path corrected)
+                    window.location.href = '../authentication.html'; 
                 }
             });
         }

@@ -467,22 +467,20 @@
         };
 
         const init = async () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-                    const isSuperAdmin = user.email === '4simpleproblems@gmail.com';
-                    
-                    if (adminDoc.exists() || isSuperAdmin) {
-                        await loadUserData();
-                        loadTrafficData();
-                        runIntegrityCheck();
-                    } else {
-                        window.location.href = '../logged-in/dashboard.html';
-                    }
+        onAuthStateChanged(auth, async (user) => {
+            if (user || window._LOCAL_MODE) {
+                // User is signed in or in local mode
+                const isAdmin = user ? await checkAdminStatus(user.uid) : true;
+                
+                if (isAdmin || window._LOCAL_MODE) {
+                    renderAnalyticsView();
                 } else {
-                    window.location.href = '../index.html';
+                    window.location.href = '../logged-in/dashboard.html';
                 }
-            });
+            } else if (!window._LOCAL_MODE) {
+                window.location.href = '../index.html';
+            }
+        });
             
             setupTabs();
         };

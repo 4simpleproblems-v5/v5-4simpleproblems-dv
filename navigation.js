@@ -236,21 +236,6 @@ let db;
         await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
         
         try {
-            if (window._LOCAL_MODE && window.currentUser) {
-                console.log("Local mode detected. Using mock user.");
-                window.applyTheme(DEFAULT_THEME);
-                // Mock auth/db for pin buttons if needed, or just let them fail/mock them
-                auth = { 
-                    signOut: () => console.log("Sign out (Local)"), 
-                    onAuthStateChanged: (cb) => cb(window.currentUser) 
-                };
-                db = { collection: () => ({ doc: () => ({ get: () => Promise.resolve({ exists: false }) }) }) };
-                
-                // Directly render
-                renderNavbar(window.currentUser, {}, pages, false);
-                return;
-            }
-
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
             await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
@@ -427,6 +412,15 @@ let db;
         let globalClickListenerAdded = false;
         let authCheckCompleted = false; 
         let isRedirecting = false;    
+
+        if (window._LOCAL_MODE && window.currentUser) {
+            console.log("Local mode detected. Using mock user.");
+            currentUser = window.currentUser;
+            currentUserData = {};
+            window.applyTheme(DEFAULT_THEME);
+            renderNavbar(currentUser, currentUserData, allPages, false);
+            return; // Skip standard Firebase listeners
+        }
 
         const PINNED_PAGE_KEY = 'navbar_pinnedPage';
         const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';

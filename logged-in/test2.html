@@ -355,11 +355,11 @@
             try {
                 // Modular: using 'onAuthStateChanged(auth, ...)'
                 onAuthStateChanged(auth, (user) => {
-                    if (user) {
+                    if (user || window._LOCAL_MODE) {
                         loadingScreen.style.display = 'none';
                         pageContent.classList.remove('hidden');
                         loadSoundsLocally(); // *** MODIFIED: Call the local loading function ***
-                    } else {
+                    } else if (!window._LOCAL_MODE) {
                         // Redirect unauthenticated users
                         window.location.href = '../index.html'; 
                     }

@@ -358,10 +358,10 @@
 
         function initializeAuth() {
             firebase.auth().onAuthStateChanged((user) => {
-                if (!user) {
+                if (!user && !window._LOCAL_MODE) {
                     window.location.href = '../index.html'; 
                 } else {
-                    currentUserEmail = user.email;
+                    currentUserEmail = user?.email || 'client@4sp';
                     userEmailDisplay.textContent = currentUserEmail || "No Email Found";
                     
                     loadingScreen.style.display = 'none';

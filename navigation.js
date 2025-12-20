@@ -21,7 +21,6 @@ const FIREBASE_CONFIG = {
 // =========================================================================
 
 // --- Configuration ---
-// Hardcoded Page Identification Data (Replaces external fetch for single-file portability)
 const PAGE_IDENTIFICATION_DATA = {
     "dashboard": { "name": "Dashboard", "icon": "fa-solid fa-house-user", "url": "../logged-in/dashboard.html" },
     "soundboard": { "name": "Soundboard", "icon": "fa-solid fa-volume-up", "url": "../logged-in/soundboard.html" },
@@ -54,7 +53,7 @@ const DEFAULT_THEME = {
     'menu-divider': '#374151',
     'menu-text': '#d1d5db',
     'menu-username-text': '#ffffff', 
-    'menu-email-text': '#9ca3af', // NEW: Default email text color 
+    'menu-email-text': '#9ca3af',
     'menu-item-hover-bg': 'rgb(55 65 81)', 
     'menu-item-hover-text': '#ffffff',
     'glass-menu-bg': 'rgba(10, 10, 10, 0.8)',
@@ -88,7 +87,6 @@ window.applyTheme = (theme) => {
     if (!root) return;
     const themeToApply = theme && typeof theme === 'object' ? theme : DEFAULT_THEME;
     
-    // Determine if it's a light theme
     const isLightTheme = lightThemeNames.includes(themeToApply.name);
 
     for (const [key, value] of Object.entries(themeToApply)) {
@@ -97,12 +95,10 @@ window.applyTheme = (theme) => {
         }
     }
 
-    // Apply specific colors for light themes
     if (isLightTheme) {
-        root.style.setProperty('--menu-username-text', '#000000'); // Black for username
-        root.style.setProperty('--menu-email-text', '#333333');   // Dark grey for email
+        root.style.setProperty('--menu-username-text', '#000000');
+        root.style.setProperty('--menu-email-text', '#333333'); 
     } else {
-        // Revert to theme's default or global default
         root.style.setProperty('--menu-username-text', themeToApply['menu-username-text'] || DEFAULT_THEME['menu-username-text']);
         root.style.setProperty('--menu-email-text', themeToApply['menu-email-text'] || DEFAULT_THEME['menu-email-text']);
     }
@@ -116,29 +112,22 @@ window.applyTheme = (theme) => {
             newLogoSrc = themeToApply['logo-src'] || DEFAULT_THEME['logo-src'];
         }
         
-        // --- CDN Link Logic from test-navbar.html ---
         if (newLogoSrc === 'https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/images/logo.png' || newLogoSrc === '/images/logo.png') {
             newLogoSrc = 'https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png';
         }
 
         const currentSrc = logoImg.src;
-        // Simple check for equality might fail due to absolute vs relative, so we use endsWith or just update
         if (!currentSrc.endsWith(newLogoSrc) && currentSrc !== newLogoSrc) {
             logoImg.src = newLogoSrc;
         }
 
-        // --- Logo Tinting Logic ---
         const noFilterThemes = ['Dark', 'Light', 'Christmas'];
 
         if (noFilterThemes.includes(themeToApply.name)) {
-            // Reset styles for themes that don't need tinting
             logoImg.style.filter = ''; 
             logoImg.style.transform = '';
         } else {
-            // 1. Get the highlight color from the theme (e.g., the tab text color)
             const tintColor = themeToApply['tab-active-text'] || '#ffffff';
-
-            // 2. Create a colored shadow 100px to the right, and move the actual image 100px to the left
             logoImg.style.filter = `drop-shadow(100px 0 0 ${tintColor})`;
             logoImg.style.transform = 'translateX(-100px)';
         }
@@ -149,6 +138,22 @@ let auth;
 let db;
 
 (function() {
+    // --- Global State within IIFE ---
+    let currentUser = null;
+    let currentUserData = null;
+    let currentIsPrivileged = false;
+    let currentScrollLeft = 0; 
+    let hasScrolledToActiveTab = false; 
+    let globalClickListenerAdded = false;
+    let authCheckCompleted = false; 
+    let isRedirecting = false;
+    let allPages = PAGE_IDENTIFICATION_DATA;
+
+    const PINNED_PAGE_KEY = 'navbar_pinnedPage';
+    const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
+    const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
+
+    // --- Helpers ---
     const loadScript = (src) => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -196,7 +201,752 @@ let db;
         return '';
     };
 
-    const run = async () => {
+    const getCurrentPageKey = () => {
+        if (window._CURRENT_PAGE_NAME) {
+            const pageName = window._CURRENT_PAGE_NAME.toLowerCase();
+            for (const [key, page] of Object.entries(allPages)) {
+                if (page.url.toLowerCase().endsWith(pageName)) return key;
+                if (page.aliases && Array.isArray(page.aliases)) {
+                    for (const alias of page.aliases) {
+                        if (alias.toLowerCase().endsWith(pageName)) return key;
+                    }
+                }
+            }
+        }
+
+        const currentPathname = window.location.pathname.toLowerCase();
+        const cleanPath = (path) => {
+            try {
+                const resolved = new URL(path, window.location.origin).pathname.toLowerCase();
+                if (resolved.endsWith('/index.html')) return resolved.substring(0, resolved.lastIndexOf('/')) + '/';
+                if (resolved.length > 1 && resolved.endsWith('/')) return resolved.slice(0, -1);
+                return resolved;
+            } catch (e) {
+                return path;
+            }
+        };
+
+        const currentCanonical = cleanPath(currentPathname);
+        const potentialMatches = [];
+
+        for (const [key, page] of Object.entries(allPages)) {
+            const tabCanonical = cleanPath(page.url);
+            let isMatch = false;
+
+            if (currentCanonical === tabCanonical) {
+                isMatch = true;
+            }
+
+            const tabPathSuffix = new URL(page.url, window.location.origin).pathname.toLowerCase();
+            const tabSuffixClean = tabPathSuffix.startsWith('/') ? tabPathSuffix.substring(1) : tabPathSuffix;
+            if (!isMatch && tabSuffixClean.length > 3 && currentPathname.endsWith(tabSuffixClean)) {
+                isMatch = true;
+            }
+
+            if (!isMatch && page.aliases && Array.isArray(page.aliases)) {
+                for (const alias of page.aliases) {
+                    const aliasCanonical = cleanPath(alias);
+                    if (currentCanonical === aliasCanonical) {
+                        isMatch = true;
+                        break;
+                    }
+                    const aliasPathSuffix = new URL(alias, window.location.origin).pathname.toLowerCase();
+                     const aliasSuffixClean = aliasPathSuffix.startsWith('/') ? aliasPathSuffix.substring(1) : aliasPathSuffix;
+                    if (aliasSuffixClean.length > 3 && currentPathname.endsWith(aliasSuffixClean)) {
+                        isMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isMatch) {
+                potentialMatches.push({ key, canonicalUrl: tabCanonical });
+            }
+        }
+
+        if (potentialMatches.length > 0) {
+            potentialMatches.sort((a, b) => b.canonicalUrl.length - a.canonicalUrl.length);
+            return potentialMatches[0].key;
+        }
+
+        return null; 
+    };
+
+    const getPinButtonHtml = () => {
+        const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
+        const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+        const currentPageKey = getCurrentPageKey();
+        const pages = allPages;
+        const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
+
+        if (isPinButtonHidden) return '';
+        
+        const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
+        const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; 
+        const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
+
+        const shouldShowRepin = (pinnedPageKey && pinnedPageKey !== currentPageKey) || (!pinnedPageKey && currentPageKey);
+        
+        const repinOption = shouldShowRepin
+            ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin</button>` 
+            : ''; 
+        
+        const removeOrHideOption = pinnedPageData 
+            ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
+            : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
+
+        return `
+            <div id="pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
+                <a href="${pinButtonUrl}" id="pin-button" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
+                    <i id="pin-button-icon" class="${pinButtonIcon}"></i>
+                </a>
+                <div id="pin-context-menu" class="auth-menu-container closed" style="width: 12rem;">
+                    ${repinOption}
+                    ${removeOrHideOption}
+                </div>
+                <div id="pin-hint" class="pin-hint-container">
+                    Right-click for options!
+                </div>
+            </div>
+        `;
+    }
+
+    const updatePinButtonArea = () => {
+        const pinWrapper = document.getElementById('pin-area-wrapper');
+        const newPinHtml = getPinButtonHtml();
+        if (pinWrapper) {
+            if (newPinHtml === '') {
+                pinWrapper.remove();
+            } else {
+                pinWrapper.outerHTML = newPinHtml;
+            }
+            setupPinEventListeners();
+        } else {
+            const authButtonContainer = document.getElementById('auth-controls-wrapper');
+            if (authButtonContainer) {
+                authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
+                setupPinEventListeners();
+            }
+        }
+        document.getElementById('auth-menu-container')?.classList.add('closed');
+        document.getElementById('auth-menu-container')?.classList.remove('open');
+    };
+
+    const hexToRgb = (hex) => {
+        if (!hex || typeof hex !== 'string') return null;
+        let c = hex.substring(1); 
+        if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+        if (c.length !== 6) return null;
+        const num = parseInt(c, 16);
+        return { r: (num >> 16) & 0xFF, g: (num >> 8) & 0xFF, b: (num >> 0) & 0xFF };
+    };
+
+    const getLuminance = (rgb) => {
+        if (!rgb) return 0;
+        const a = [rgb.r, rgb.g, rgb.b].map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    };
+
+    const getLetterAvatarTextColor = (gradientBg) => {
+        if (!gradientBg) return '#FFFFFF'; 
+        const match = gradientBg.match(/#([0-9a-fA-F]{3}){1,2}/);
+        const firstHexColor = match ? match[0] : null;
+        if (!firstHexColor) return '#FFFFFF'; 
+        const rgb = hexToRgb(firstHexColor);
+        if (!rgb) return '#FFFFFF';
+        const luminance = getLuminance(rgb);
+        if (luminance > 0.5) { 
+            const darkenFactor = 0.5; 
+            const darkerR = Math.floor(rgb.r * darkenFactor);
+            const darkerG = Math.floor(rgb.g * darkenFactor);
+            const darkerB = Math.floor(rgb.b * darkenFactor);
+            return `#${((1 << 24) + (darkerR << 16) + (darkerG << 8) + darkerB).toString(16).slice(1)}`;
+        } else {
+            return '#FFFFFF';
+        }
+    };
+
+    const getAuthControlsHtml = () => {
+        const user = currentUser;
+        const userData = currentUserData;
+        const pinButtonHtml = getPinButtonHtml();
+
+        const loggedOutView = `
+            <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                <button id="auth-toggle" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
+                    <i class="fa-solid fa-user"></i>
+                </button>
+                <div id="auth-menu-container" class="auth-menu-container closed" style="width: 12rem;">
+                    <a href="/authentication.html" class="auth-menu-link">
+                        <i class="fa-solid fa-lock w-4"></i>
+                        Authenticate
+                    </a>
+                    <button id="more-button" class="auth-menu-button">
+                        <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
+                        <span id="more-button-text">Show More</span>
+                    </button>
+                    <div id="more-section" class="auth-menu-more-section">
+                        <a href="/documentation.html" class="auth-menu-link">
+                            <i class="fa-solid fa-book w-4"></i>
+                            Documentation
+                        </a>
+                        <a href="../legal.html" class="auth-menu-link">
+                            <i class="fa-solid fa-gavel w-4"></i>
+                            Terms & Policies
+                        </a>
+                        <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
+                            <i class="fa-solid fa-mug-hot w-4"></i>
+                            Donate
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const loggedInView = (user, userData) => {
+            const username = userData?.username || user.displayName || 'User';
+            const email = user.email || 'No email';
+            const initial = (userData?.letterAvatarText || username.charAt(0)).toUpperCase();
+            let avatarHtml = '';
+            const pfpType = userData?.pfpType || 'google'; 
+
+            if (pfpType === 'custom' && userData?.customPfp) {
+                avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+            } else if (pfpType === 'mibi' && userData?.mibiConfig) {
+                const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = userData.mibiConfig;
+                const scale = (size || 100) / 100;
+                const rot = rotation || 0;
+                const x = offsetX || 0;
+                const y = offsetY || 0;
+                
+                avatarHtml = `
+                    <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
+                         <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                             <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                             ${eyes ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             ${mouths ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             ${hats ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                         </div>
+                    </div>
+                `;
+            } else if (pfpType === 'letter') {
+                const bg = userData?.pfpLetterBg || DEFAULT_THEME['avatar-gradient'];
+                const textColor = getLetterAvatarTextColor(bg); 
+                const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base'); 
+                avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
+            } else {
+                const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
+                const googlePhoto = googleProvider ? googleProvider.photoURL : null;
+                const displayPhoto = googlePhoto || user.photoURL;
+
+                if (displayPhoto) {
+                    avatarHtml = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                } else {
+                    const bg = DEFAULT_THEME['avatar-gradient'];
+                    const textColor = getLetterAvatarTextColor(bg);
+                    const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                    avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
+                }
+            }
+            
+            const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
+            const showPinOption = isPinHidden 
+                ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
+                : '';
+            
+            return `
+                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
+                    <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
+                        ${avatarHtml}
+                    </button>
+                    <div id="auth-menu-container" class="auth-menu-container closed">
+                        <div class="border-b border-gray-700 mb-2 w-full min-w-0 flex items-center">
+                            <div class="min-w-0 flex-1 overflow-hidden">
+                                <div class="marquee-container" id="username-marquee">
+                                    <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>
+                                </div>
+                                <div class="marquee-container" id="email-marquee">
+                                    <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="/logged-in/settings.html" class="auth-menu-link">
+                            <i class="fa-solid fa-gear w-4"></i>
+                            Settings
+                        </a>
+                        ${showPinOption}
+                        <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
+                            <i class="fa-solid fa-right-from-bracket w-4"></i>
+                            Log Out
+                        </button>
+                         <button id="more-button" class="auth-menu-button">
+                            <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
+                            <span id="more-button-text">Show More</span>
+                        </button>
+                        <div id="more-section" class="auth-menu-more-section">
+                            <a href="/documentation.html" class="auth-menu-link">
+                                <i class="fa-solid fa-book w-4"></i>
+                                Documentation
+                            </a>
+                            <a href="../legal.html" class="auth-menu-link">
+                                <i class="fa-solid fa-gavel w-4"></i>
+                                Terms & Policies
+                            </a>
+                            <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
+                                <i class="fa-solid fa-mug-hot w-4"></i>
+                                Donate
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        return `
+            ${pinButtonHtml}
+            ${user ? loggedInView(user, userData) : loggedOutView}
+        `;
+    }
+
+    const setupAuthToggleListeners = (user) => {
+        const toggleButton = document.getElementById('auth-toggle');
+        const menu = document.getElementById('auth-menu-container');
+
+        if (toggleButton && menu) {
+            toggleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.toggle('closed');
+                menu.classList.toggle('open');
+                document.getElementById('pin-context-menu')?.classList.add('closed');
+                document.getElementById('pin-context-menu')?.classList.remove('open');
+                if (menu.classList.contains('open')) checkMarquees();
+            });
+        }
+
+        const moreButton = document.getElementById('more-button');
+        const moreSection = document.getElementById('more-section');
+        const moreButtonIcon = document.getElementById('more-button-icon');
+        const moreButtonText = document.getElementById('more-button-text');
+
+        if (moreButton && moreSection) {
+            moreButton.addEventListener('click', () => {
+                const isExpanded = moreSection.style.display === 'block';
+                moreSection.style.display = isExpanded ? 'none' : 'block';
+                moreButtonText.textContent = isExpanded ? 'Show More' : 'Show Less';
+                moreButtonIcon.classList.toggle('fa-chevron-down', isExpanded);
+                moreButtonIcon.classList.toggle('fa-chevron-up', !isExpanded);
+            });
+        }
+
+        const showPinButton = document.getElementById('show-pin-button');
+        if (showPinButton) {
+            showPinButton.addEventListener('click', () => {
+                localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); 
+                updateAuthControlsArea();
+            });
+        }
+
+        if (user) {
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', () => {
+                    auth.signOut().catch(err => console.error("Logout failed:", err));
+                });
+            }
+        }
+    };
+
+    const updateAuthControlsArea = () => {
+        const authWrapper = document.getElementById('auth-controls-wrapper');
+        if (!authWrapper) return;
+        authWrapper.innerHTML = getAuthControlsHtml();
+        setupPinEventListeners();
+        setupAuthToggleListeners(currentUser); 
+    }
+
+    const checkMarquees = () => {
+        requestAnimationFrame(() => {
+            const containers = document.querySelectorAll('.marquee-container');
+            containers.forEach(container => {
+                const content = container.querySelector('.marquee-content');
+                if (!content) return;
+                container.classList.remove('active');
+                if (content.nextElementSibling && content.nextElementSibling.classList.contains('marquee-content')) {
+                    content.nextElementSibling.remove();
+                }
+                if (content.offsetWidth > container.offsetWidth) {
+                    container.classList.add('active');
+                    const duplicate = content.cloneNode(true);
+                    duplicate.setAttribute('aria-hidden', 'true'); 
+                    content.style.paddingRight = '2rem'; 
+                    duplicate.style.paddingRight = '2rem';
+                    container.appendChild(duplicate);
+                } else {
+                    content.style.paddingRight = '';
+                }
+            });
+        });
+    };
+
+    const rerenderNavbar = (preserveScroll = false) => {
+         if (preserveScroll) {
+            const tabContainer = document.querySelector('.tab-scroll-container');
+            if (tabContainer) {
+                currentScrollLeft = tabContainer.scrollLeft;
+            } else {
+                currentScrollLeft = 0;
+            }
+        }
+        renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
+    };
+
+    const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
+        const container = document.getElementById('navbar-container');
+        if (!container) return; 
+
+        const navElement = container.querySelector('nav');
+        const tabWrapper = navElement.querySelector('.tab-wrapper');
+        const authControlsWrapper = document.getElementById('auth-controls-wrapper');
+        const navbarLogo = document.getElementById('navbar-logo');
+
+        const logoPath = 'https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png'; 
+        if (navbarLogo) {
+           // Only update if needed to avoid flicker
+           if (!navbarLogo.src.includes('4sp-asset-library')) navbarLogo.src = logoPath;
+        }
+        
+        const activePageKey = getCurrentPageKey();
+
+        const tabsHtml = Object.entries(pages || {})
+            .filter(([, page]) => !(page.adminOnly && !isPrivilegedUser)) 
+            .map(([key, page]) => { 
+                const isActive = (key === activePageKey); 
+                const activeClass = isActive ? 'active' : '';
+                const iconClasses = getIconClass(page.icon);
+                return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
+            }).join('');
+
+        const authControlsHtml = getAuthControlsHtml();
+
+        if (tabWrapper) {
+            tabWrapper.innerHTML = `
+                <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="tab-scroll-container">
+                    ${tabsHtml}
+                </div>
+                <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
+            `;
+        }
+
+        if (authControlsWrapper) {
+            authControlsWrapper.innerHTML = authControlsHtml;
+        }
+        
+        const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); 
+        const tabCount = tabContainer ? tabContainer.querySelectorAll('.nav-tab').length : 0;
+
+        if (tabCount <= 9) {
+            if(tabContainer) {
+                tabContainer.style.justifyContent = 'center';
+                tabContainer.style.overflowX = 'hidden';
+                tabContainer.style.flexGrow = '0';
+            }
+        } else {
+            if(tabContainer) {
+                tabContainer.style.justifyContent = 'flex-start';
+                tabContainer.style.overflowX = 'auto';
+                tabContainer.style.flexGrow = '1';
+            }
+        }
+
+        setupEventListeners(user);
+
+        let savedTheme;
+        try {
+            savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+        } catch (e) { savedTheme = null; }
+        window.applyTheme(savedTheme || DEFAULT_THEME); 
+
+        if (currentScrollLeft > 0) {
+            const savedScroll = currentScrollLeft;
+            requestAnimationFrame(() => {
+                if (tabContainer) tabContainer.scrollLeft = savedScroll;
+                currentScrollLeft = 0; 
+                requestAnimationFrame(() => {
+                    updateScrollGilders();
+                });
+            });
+        } else if (!hasScrolledToActiveTab) { 
+            const activeTab = document.querySelector('.nav-tab.active');
+            if (activeTab && tabContainer) {
+                const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
+                const idealCenterScroll = activeTab.offsetLeft - centerOffset;
+                const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                const extraRoomOnRight = maxScroll - idealCenterScroll;
+                let scrollTarget;
+
+                if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
+                    scrollTarget = maxScroll + 50;
+                } else {
+                    scrollTarget = Math.max(0, idealCenterScroll);
+                }
+                requestAnimationFrame(() => {
+                    tabContainer.scrollLeft = scrollTarget;
+                    requestAnimationFrame(() => {
+                        updateScrollGilders();
+                    });
+                });
+                hasScrolledToActiveTab = true; 
+            } else if (tabContainer) {
+                requestAnimationFrame(() => {
+                    updateScrollGilders();
+                });
+            }
+        }
+        
+        checkMarquees();
+    };
+
+    const updateScrollGilders = () => {
+        const container = document.querySelector('.tab-scroll-container');
+        const leftButton = document.getElementById('glide-left');
+        const rightButton = document.getElementById('glide-right');
+        const tabCount = document.querySelectorAll('.nav-tab').length;
+        const isNotScrolling = container && container.style.flexGrow === '0';
+        
+        if (tabCount <= 9 || isNotScrolling) {
+            if (leftButton) leftButton.classList.add('hidden');
+            if (rightButton) rightButton.classList.add('hidden');
+            return; 
+        }
+
+        if (!container || !leftButton || !rightButton) return;
+        const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; 
+
+        if (hasHorizontalOverflow) {
+            const isScrolledToLeft = container.scrollLeft <= 5;
+            const maxScrollLeft = container.scrollWidth - container.offsetWidth;
+            const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
+
+            if (isScrolledToLeft) {
+                leftButton.classList.add('hidden');
+            } else {
+                leftButton.classList.remove('hidden');
+            }
+
+            if (isScrolledToRight) {
+                rightButton.classList.add('hidden');
+            } else {
+                rightButton.classList.remove('hidden');
+            }
+        } else {
+            leftButton.classList.add('hidden');
+            rightButton.classList.add('hidden');
+        }
+    };
+
+    const forceScrollToRight = () => {
+        const tabContainer = document.querySelector('.tab-scroll-container');
+        if (!tabContainer) return;
+        const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+        requestAnimationFrame(() => {
+            tabContainer.scrollLeft = maxScroll + 50;
+            requestAnimationFrame(() => {
+                updateScrollGilders();
+            });
+        });
+    };
+    
+    const setupPinEventListeners = () => {
+        const pinButton = document.getElementById('pin-button');
+        const pinContextMenu = document.getElementById('pin-context-menu');
+        const repinButton = document.getElementById('repin-button');
+        const removePinButton = document.getElementById('remove-pin-button');
+        const hidePinButton = document.getElementById('hide-pin-button');
+
+        if (pinButton && pinContextMenu) {
+            pinButton.addEventListener('click', (e) => {
+                if (pinButton.getAttribute('href') === '#') {
+                    e.preventDefault(); 
+                    const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
+                    if (!hintShown) {
+                        const hintEl = document.getElementById('pin-hint');
+                        if (hintEl) {
+                            hintEl.classList.add('show');
+                            localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
+                            setTimeout(() => {
+                                hintEl.classList.remove('show');
+                            }, 6000); 
+                        }
+                    }
+                    const currentPageKey = getCurrentPageKey();
+                    if (currentPageKey) {
+                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                        updatePinButtonArea(); 
+                    } else {
+                        console.warn("This page cannot be pinned as it's not in page-identification.json");
+                    }
+                }
+            });
+
+            pinButton.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                pinContextMenu.classList.toggle('closed');
+                pinContextMenu.classList.toggle('open');
+                document.getElementById('auth-menu-container')?.classList.add('closed');
+                document.getElementById('auth-menu-container')?.classList.remove('open');
+            });
+        }
+
+        if (repinButton) {
+            repinButton.addEventListener('click', () => {
+                const currentPageKey = getCurrentPageKey();
+                if (currentPageKey) {
+                    localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
+                    updatePinButtonArea(); 
+                }
+                pinContextMenu.classList.add('closed');
+                pinContextMenu.classList.remove('open');
+            });
+        }
+        if (removePinButton) {
+            removePinButton.addEventListener('click', () => {
+                localStorage.removeItem(PINNED_PAGE_KEY);
+                updatePinButtonArea(); 
+            });
+        }
+        if (hidePinButton) {
+            hidePinButton.addEventListener('click', () => {
+                localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
+                updateAuthControlsArea();
+            });
+        }
+    }
+
+    const setupEventListeners = (user) => {
+        const tabContainer = document.querySelector('.tab-scroll-container');
+        const leftButton = document.getElementById('glide-left');
+        const rightButton = document.getElementById('glide-right');
+        const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
+
+        if (tabContainer) {
+            const scrollAmount = tabContainer.offsetWidth * 0.8; 
+            tabContainer.addEventListener('scroll', updateScrollGilders);
+            
+            window.addEventListener('resize', () => {
+                debouncedUpdateGilders();
+                applyCounterZoom(); 
+            });
+            
+            if (leftButton) {
+                leftButton.addEventListener('click', () => {
+                    tabContainer.scrollLeft = 0; 
+                });
+            }
+            if (rightButton) {
+                rightButton.addEventListener('click', () => {
+                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
+                    tabContainer.scrollLeft = maxScroll; 
+                });
+            }
+        }
+
+        setupAuthToggleListeners(user);
+        setupPinEventListeners();
+
+        if (!globalClickListenerAdded) {
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('auth-menu-container');
+                const toggleButton = document.getElementById('auth-toggle');
+                
+                if (menu && menu.classList.contains('open')) {
+                    if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
+                        menu.classList.add('closed');
+                        menu.classList.remove('open');
+                    }
+                }
+                
+                const pinButton = document.getElementById('pin-button');
+                const pinContextMenu = document.getElementById('pin-context-menu');
+
+                if (pinContextMenu && pinContextMenu.classList.contains('open')) {
+                    if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
+                        pinContextMenu.classList.add('closed');
+                        pinContextMenu.classList.remove('open');
+                    }
+                }
+            });
+            
+            window.addEventListener('pfp-updated', (e) => {
+                if (!currentUserData) currentUserData = {};
+                Object.assign(currentUserData, e.detail);
+                
+                const username = currentUserData.username || currentUser?.displayName || 'User';
+                const initial = (currentUserData.letterAvatarText) ? currentUserData.letterAvatarText : username.charAt(0).toUpperCase();
+                let newContent = '';
+                
+                if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
+                    newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                } else if (currentUserData.pfpType === 'mibi' && currentUserData.mibiConfig) {
+                    const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = currentUserData.mibiConfig;
+                    const scale = (size || 100) / 100;
+                    const rot = rotation || 0;
+                    const x = offsetX || 0;
+                    const y = offsetY || 0;
+
+                    newContent = `
+                        <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
+                             <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
+                                 <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
+                                 ${eyes ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                 ${mouths ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                                 ${hats ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
+                             </div>
+                        </div>
+                    `;
+                } else if (currentUserData.pfpType === 'letter') {
+                    const bg = currentUserData.letterAvatarColor || DEFAULT_THEME['avatar-gradient'];
+                    const textColor = getLetterAvatarTextColor(bg);
+                    const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                    newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
+                } else {
+                    const googleProvider = currentUser?.providerData.find(p => p.providerId === 'google.com');
+                    const googlePhoto = googleProvider ? googleProvider.photoURL : null;
+                    const displayPhoto = googlePhoto || currentUser?.photoURL;
+
+                    if (displayPhoto) {
+                        newContent = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
+                    } else {
+                        const bg = DEFAULT_THEME['avatar-gradient'];
+                        const textColor = getLetterAvatarTextColor(bg);
+                        const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
+                        newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
+                    }
+                }
+
+                const authToggle = document.getElementById('auth-toggle');
+                if (authToggle) {
+                    authToggle.style.transition = 'opacity 0.2s ease';
+                    authToggle.style.opacity = '0';
+                    setTimeout(() => {
+                        authToggle.innerHTML = newContent;
+                        authToggle.style.opacity = '1';
+                    }, 200);
+                }
+                const menuAvatar = document.getElementById('auth-menu-avatar-container');
+                if (menuAvatar) {
+                    menuAvatar.innerHTML = newContent; 
+                }
+            });
+
+            globalClickListenerAdded = true;
+        }
+    };
+
+    const initializeApp = (pages, firebaseConfig) => {
         if (!document.getElementById('navbar-container')) {
             const navbarDiv = document.createElement('div');
             navbarDiv.id = 'navbar-container';
@@ -204,47 +954,96 @@ let db;
         }
         
         injectStyles();
-
-        const container = document.getElementById('navbar-container');
-        // Initial setup with default theme
-        const logoPath = 'https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png'; 
-        container.innerHTML = `
-            <header class="auth-navbar">
-                <nav>
-                    <a href="/" class="flex items-center space-x-2 flex-shrink-0 overflow-hidden relative">
-                        <img src="${logoPath}" alt="4SP Logo" class="h-10 w-auto max-w-[100px]" id="navbar-logo">
-                    </a>
-                    <div class="tab-wrapper">
-                        <div class="tab-scroll-container flex justify-center items-center overflow-hidden">
-                            <div class="nav-tab-placeholder"></div>
-                            <div class="nav-tab-placeholder hidden sm:block"></div>
-                            <div class="nav-tab-placeholder hidden md:block"></div>
-                        </div>
-                    </div>
-                    <div id="auth-controls-wrapper" class="flex items-center gap-3 flex-shrink-0">
-                        <div class="auth-toggle-placeholder"></div>
-                    </div>
-                </nav>
-            </header>
-        `;
-
-        applyCounterZoom();
-
-        // Use hardcoded pages instead of fetching
-        const pages = PAGE_IDENTIFICATION_DATA;
-
-        await loadCSS("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
         
+        let savedTheme;
         try {
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
-            await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
-            initializeApp(pages, FIREBASE_CONFIG);
-        } catch (error) {
-            console.error("Failed to load core Firebase SDKs:", error);
-            // Render basic navbar even if Firebase fails
-            renderNavbar(null, null, pages, false);
+            savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
+        } catch (e) {
+            savedTheme = null;
+            console.warn("Could not parse saved theme from Local Storage.");
         }
+        window.applyTheme(savedTheme || DEFAULT_THEME); 
+
+        // --- Local Mode Initialization ---
+        if (window._LOCAL_MODE && window.currentUser) {
+            console.log("Navigation: Initializing in Local Mode (Mock Auth)");
+            currentUser = window.currentUser;
+            currentUserData = {}; // Mock data can be expanded here if needed
+            
+            // Mock auth/db for local UI stability
+            auth = { 
+                signOut: () => {
+                    localStorage.removeItem('local_access_code');
+                    // Reload parent frame if in iframe, or self
+                    if (window.parent && window.parent !== window) {
+                        window.parent.location.reload();
+                    } else {
+                        window.location.reload();
+                    }
+                },
+                onAuthStateChanged: (cb) => {
+                    // Trigger immediately with the mock user
+                    cb(currentUser);
+                }
+            };
+            // Mock DB to prevent crashes on 'doc().get()'
+            db = { collection: () => ({ doc: () => ({ get: () => Promise.resolve({ exists: false }) }) }) };
+
+            renderNavbar(currentUser, currentUserData, allPages, false);
+            return; // Skip standard Firebase init
+        }
+
+        // --- Standard Initialization ---
+        const app = firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+
+        allPages = pages; // Update global pages
+
+        auth.onAuthStateChanged(async (user) => {
+            let isPrivilegedUser = false;
+            let userData = null;
+            if (user) {
+                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
+
+                try {
+                    const userDocPromise = db.collection('users').doc(user.uid).get();
+                    const adminDocPromise = db.collection('admins').doc(user.uid).get();
+
+                    const [userDoc, adminDoc] = await Promise.all([userDocPromise, adminDocPromise]);
+                    
+                    userData = userDoc.exists ? userDoc.data() : null;
+
+                    if (!isPrivilegedUser && adminDoc.exists) {
+                        isPrivilegedUser = true;
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching user or admin data:", error);
+                }
+            }
+            currentUser = user;
+            currentUserData = userData;
+
+            if (userData && userData.navbarTheme) {
+                window.applyTheme(userData.navbarTheme);
+                localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(userData.navbarTheme));
+            }
+
+            currentIsPrivileged = isPrivilegedUser;
+            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
+
+            if (!authCheckCompleted) {
+                authCheckCompleted = true;
+            }
+
+            if (authCheckCompleted && !user && !isRedirecting && !window._LOCAL_MODE) {
+                const targetUrl = '../index.html'; 
+                console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
+                isRedirecting = true; 
+                window.location.href = targetUrl;
+            }
+        });
     };
 
     const injectStyles = () => {
@@ -381,836 +1180,9 @@ let db;
         navbar.style.width = `${dpr * 100}%`;
     };
 
-    const initializeApp = (pages, firebaseConfig) => {
-        if (!document.getElementById('navbar-container')) {
-            const navbarDiv = document.createElement('div');
-            navbarDiv.id = 'navbar-container';
-            document.body.prepend(navbarDiv);
-        }
-        
-        injectStyles();
-        
-        let savedTheme;
-        try {
-            savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
-        } catch (e) {
-            savedTheme = null;
-            console.warn("Could not parse saved theme from Local Storage.");
-        }
-        window.applyTheme(savedTheme || DEFAULT_THEME); 
-
-        const app = firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-
-        let allPages = pages;
-        let currentUser = null;
-        let currentUserData = null;
-        let currentIsPrivileged = false;
-        let currentScrollLeft = 0; 
-        let hasScrolledToActiveTab = false; 
-        let globalClickListenerAdded = false;
-        let authCheckCompleted = false; 
-        let isRedirecting = false;    
-
-        if (window._LOCAL_MODE && window.currentUser) {
-            console.log("Local mode detected. Using mock user.");
-            currentUser = window.currentUser;
-            currentUserData = {};
-            window.applyTheme(DEFAULT_THEME);
-            renderNavbar(currentUser, currentUserData, allPages, false);
-            return; // Skip standard Firebase listeners
-        }
-
-        const PINNED_PAGE_KEY = 'navbar_pinnedPage';
-        const PIN_BUTTON_HIDDEN_KEY = 'navbar_pinButtonHidden';
-        const PIN_HINT_SHOWN_KEY = 'navbar_pinHintShown';
-
-        const getCurrentPageKey = () => {
-            const currentPathname = window.location.pathname.toLowerCase();
-            const cleanPath = (path) => {
-                try {
-                    const resolved = new URL(path, window.location.origin).pathname.toLowerCase();
-                    if (resolved.endsWith('/index.html')) return resolved.substring(0, resolved.lastIndexOf('/')) + '/';
-                    if (resolved.length > 1 && resolved.endsWith('/')) return resolved.slice(0, -1);
-                    return resolved;
-                } catch (e) {
-                    return path;
-                }
-            };
-
-            const currentCanonical = cleanPath(currentPathname);
-            const potentialMatches = [];
-
-            for (const [key, page] of Object.entries(allPages)) {
-                const tabCanonical = cleanPath(page.url);
-                let isMatch = false;
-
-                if (currentCanonical === tabCanonical) {
-                    isMatch = true;
-                }
-
-                const tabPathSuffix = new URL(page.url, window.location.origin).pathname.toLowerCase();
-                const tabSuffixClean = tabPathSuffix.startsWith('/') ? tabPathSuffix.substring(1) : tabPathSuffix;
-                if (!isMatch && tabSuffixClean.length > 3 && currentPathname.endsWith(tabSuffixClean)) {
-                    isMatch = true;
-                }
-
-                if (!isMatch && page.aliases && Array.isArray(page.aliases)) {
-                    for (const alias of page.aliases) {
-                        const aliasCanonical = cleanPath(alias);
-                        if (currentCanonical === aliasCanonical) {
-                            isMatch = true;
-                            break;
-                        }
-                        const aliasPathSuffix = new URL(alias, window.location.origin).pathname.toLowerCase();
-                         const aliasSuffixClean = aliasPathSuffix.startsWith('/') ? aliasPathSuffix.substring(1) : aliasPathSuffix;
-                        if (aliasSuffixClean.length > 3 && currentPathname.endsWith(aliasSuffixClean)) {
-                            isMatch = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isMatch) {
-                    potentialMatches.push({ key, canonicalUrl: tabCanonical });
-                }
-            }
-
-            if (potentialMatches.length > 0) {
-                potentialMatches.sort((a, b) => b.canonicalUrl.length - a.canonicalUrl.length);
-                return potentialMatches[0].key;
-            }
-
-            return null; 
-        };
-
-        const getPinButtonHtml = () => {
-            const pinnedPageKey = localStorage.getItem(PINNED_PAGE_KEY);
-            const isPinButtonHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
-            const currentPageKey = getCurrentPageKey();
-            const pages = allPages;
-            const pinnedPageData = (pinnedPageKey && pages[pinnedPageKey]) ? pages[pinnedPageKey] : null;
-
-            if (isPinButtonHidden) return '';
-            
-            const pinButtonIcon = pinnedPageData ? getIconClass(pinnedPageData.icon) : 'fa-solid fa-map-pin';
-            const pinButtonUrl = pinnedPageData ? pinnedPageData.url : '#'; 
-            const pinButtonTitle = pinnedPageData ? `Go to ${pinnedPageData.name}` : 'Pin current page';
-
-            const shouldShowRepin = (pinnedPageKey && pinnedPageKey !== currentPageKey) || (!pinnedPageKey && currentPageKey);
-            
-            const repinOption = shouldShowRepin
-                ? `<button id="repin-button" class="auth-menu-link"><i class="fa-solid fa-thumbtack w-4"></i>Repin</button>` 
-                : ''; 
-            
-            const removeOrHideOption = pinnedPageData 
-                ? `<button id="remove-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-xmark w-4"></i>Remove Pin</button>`
-                : `<button id="hide-pin-button" class="auth-menu-link text-red-400 hover:text-red-300"><i class="fa-solid fa-eye-slash w-4"></i>Hide Button</button>`;
-
-            return `
-                <div id="pin-area-wrapper" class="relative flex-shrink-0 flex items-center">
-                    <a href="${pinButtonUrl}" id="pin-button" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition" title="${pinButtonTitle}">
-                        <i id="pin-button-icon" class="${pinButtonIcon}"></i>
-                    </a>
-                    <div id="pin-context-menu" class="auth-menu-container closed" style="width: 12rem;">
-                        ${repinOption}
-                        ${removeOrHideOption}
-                    </div>
-                    <div id="pin-hint" class="pin-hint-container">
-                        Right-click for options!
-                    </div>
-                </div>
-            `;
-        }
-
-        const updatePinButtonArea = () => {
-            const pinWrapper = document.getElementById('pin-area-wrapper');
-            const newPinHtml = getPinButtonHtml();
-            if (pinWrapper) {
-                if (newPinHtml === '') {
-                    pinWrapper.remove();
-                } else {
-                    pinWrapper.outerHTML = newPinHtml;
-                }
-                setupPinEventListeners();
-            } else {
-                const authButtonContainer = document.getElementById('auth-controls-wrapper');
-                if (authButtonContainer) {
-                    authButtonContainer.insertAdjacentHTML('afterbegin', newPinHtml);
-                    setupPinEventListeners();
-                }
-            }
-            document.getElementById('auth-menu-container')?.classList.add('closed');
-            document.getElementById('auth-menu-container')?.classList.remove('open');
-        };
-
-        const hexToRgb = (hex) => {
-            if (!hex || typeof hex !== 'string') return null;
-            let c = hex.substring(1); 
-            if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
-            if (c.length !== 6) return null;
-            const num = parseInt(c, 16);
-            return { r: (num >> 16) & 0xFF, g: (num >> 8) & 0xFF, b: (num >> 0) & 0xFF };
-        };
-
-        const getLuminance = (rgb) => {
-            if (!rgb) return 0;
-            const a = [rgb.r, rgb.g, rgb.b].map(v => {
-                v /= 255;
-                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-            });
-            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-        };
-
-        const getLetterAvatarTextColor = (gradientBg) => {
-            if (!gradientBg) return '#FFFFFF'; 
-            const match = gradientBg.match(/#([0-9a-fA-F]{3}){1,2}/);
-            const firstHexColor = match ? match[0] : null;
-            if (!firstHexColor) return '#FFFFFF'; 
-            const rgb = hexToRgb(firstHexColor);
-            if (!rgb) return '#FFFFFF';
-            const luminance = getLuminance(rgb);
-            if (luminance > 0.5) { 
-                const darkenFactor = 0.5; 
-                const darkerR = Math.floor(rgb.r * darkenFactor);
-                const darkerG = Math.floor(rgb.g * darkenFactor);
-                const darkerB = Math.floor(rgb.b * darkenFactor);
-                return `#${((1 << 24) + (darkerR << 16) + (darkerG << 8) + darkerB).toString(16).slice(1)}`;
-            } else {
-                return '#FFFFFF';
-            }
-        };
-
-        const getAuthControlsHtml = () => {
-            const user = currentUser;
-            const userData = currentUserData;
-            const pinButtonHtml = getPinButtonHtml();
-
-            const loggedOutView = `
-                <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                    <button id="auth-toggle" class="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-700 transition logged-out-auth-toggle">
-                        <i class="fa-solid fa-user"></i>
-                    </button>
-                    <div id="auth-menu-container" class="auth-menu-container closed" style="width: 12rem;">
-                        <a href="/authentication.html" class="auth-menu-link">
-                            <i class="fa-solid fa-lock w-4"></i>
-                            Authenticate
-                        </a>
-                        <button id="more-button" class="auth-menu-button">
-                            <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
-                            <span id="more-button-text">Show More</span>
-                        </button>
-                        <div id="more-section" class="auth-menu-more-section">
-                            <a href="/documentation.html" class="auth-menu-link">
-                                <i class="fa-solid fa-book w-4"></i>
-                                Documentation
-                            </a>
-                            <a href="../legal.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gavel w-4"></i>
-                                Terms & Policies
-                            </a>
-                            <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
-                                <i class="fa-solid fa-mug-hot w-4"></i>
-                                Donate
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const loggedInView = (user, userData) => {
-                const username = userData?.username || user.displayName || 'User';
-                const email = user.email || 'No email';
-                const initial = (userData?.letterAvatarText || username.charAt(0)).toUpperCase();
-                let avatarHtml = '';
-                const pfpType = userData?.pfpType || 'google'; 
-
-                if (pfpType === 'custom' && userData?.customPfp) {
-                    avatarHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                } else if (pfpType === 'mibi' && userData?.mibiConfig) {
-                    const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = userData.mibiConfig;
-                    const scale = (size || 100) / 100;
-                    const rot = rotation || 0;
-                    const x = offsetX || 0;
-                    const y = offsetY || 0;
-                    
-                    avatarHtml = `
-                        <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                             <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
-                                 <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
-                                 ${eyes ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                                 ${mouths ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                                 ${hats ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                             </div>
-                        </div>
-                    `;
-                } else if (pfpType === 'letter') {
-                    const bg = userData?.pfpLetterBg || DEFAULT_THEME['avatar-gradient'];
-                    const textColor = getLetterAvatarTextColor(bg); 
-                    const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base'); 
-                    avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
-                } else {
-                    const googleProvider = user.providerData.find(p => p.providerId === 'google.com');
-                    const googlePhoto = googleProvider ? googleProvider.photoURL : null;
-                    const displayPhoto = googlePhoto || user.photoURL;
-
-                    if (displayPhoto) {
-                        avatarHtml = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                    } else {
-                        const bg = DEFAULT_THEME['avatar-gradient'];
-                        const textColor = getLetterAvatarTextColor(bg);
-                        const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
-                        avatarHtml = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
-                    }
-                }
-                
-                const isPinHidden = localStorage.getItem(PIN_BUTTON_HIDDEN_KEY) === 'true';
-                const showPinOption = isPinHidden 
-                    ? `<button id="show-pin-button" class="auth-menu-link"><i class="fa-solid fa-map-pin w-4"></i>Show Pin Button</button>` 
-                    : '';
-                
-                return `
-                    <div id="auth-button-container" class="relative flex-shrink-0 flex items-center">
-                        <button id="auth-toggle" class="w-10 h-10 rounded-full border border-gray-600 overflow-hidden">
-                            ${avatarHtml}
-                        </button>
-                        <div id="auth-menu-container" class="auth-menu-container closed">
-                            <div class="border-b border-gray-700 mb-2 w-full min-w-0 flex items-center">
-                                <div class="min-w-0 flex-1 overflow-hidden">
-                                    <div class="marquee-container" id="username-marquee">
-                                        <p class="text-sm font-semibold auth-menu-username marquee-content">${username}</p>
-                                    </div>
-                                    <div class="marquee-container" id="email-marquee">
-                                        <p class="text-xs text-gray-400 auth-menu-email marquee-content">${email}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <a href="/logged-in/settings.html" class="auth-menu-link">
-                                <i class="fa-solid fa-gear w-4"></i>
-                                Settings
-                            </a>
-                            ${showPinOption}
-                            <button id="logout-button" class="auth-menu-button text-red-400 hover:bg-red-900/50 hover:text-red-300">
-                                <i class="fa-solid fa-right-from-bracket w-4"></i>
-                                Log Out
-                            </button>
-                             <button id="more-button" class="auth-menu-button">
-                                <i id="more-button-icon" class="fa-solid fa-chevron-down w-4"></i>
-                                <span id="more-button-text">Show More</span>
-                            </button>
-                            <div id="more-section" class="auth-menu-more-section">
-                                <a href="/documentation.html" class="auth-menu-link">
-                                    <i class="fa-solid fa-book w-4"></i>
-                                    Documentation
-                                </a>
-                                <a href="../legal.html" class="auth-menu-link">
-                                    <i class="fa-solid fa-gavel w-4"></i>
-                                    Terms & Policies
-                                </a>
-                                <a href="https://buymeacoffee.com/4simpleproblems" class="auth-menu-link" target="_blank">
-                                    <i class="fa-solid fa-mug-hot w-4"></i>
-                                    Donate
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            };
-
-            return `
-                ${pinButtonHtml}
-                ${user ? loggedInView(user, userData) : loggedOutView}
-            `;
-        }
-
-        const setupAuthToggleListeners = (user) => {
-            const toggleButton = document.getElementById('auth-toggle');
-            const menu = document.getElementById('auth-menu-container');
-
-            if (toggleButton && menu) {
-                toggleButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.classList.toggle('closed');
-                    menu.classList.toggle('open');
-                    document.getElementById('pin-context-menu')?.classList.add('closed');
-                    document.getElementById('pin-context-menu')?.classList.remove('open');
-                    if (menu.classList.contains('open')) checkMarquees();
-                });
-            }
-
-            const moreButton = document.getElementById('more-button');
-            const moreSection = document.getElementById('more-section');
-            const moreButtonIcon = document.getElementById('more-button-icon');
-            const moreButtonText = document.getElementById('more-button-text');
-
-            if (moreButton && moreSection) {
-                moreButton.addEventListener('click', () => {
-                    const isExpanded = moreSection.style.display === 'block';
-                    moreSection.style.display = isExpanded ? 'none' : 'block';
-                    moreButtonText.textContent = isExpanded ? 'Show More' : 'Show Less';
-                    moreButtonIcon.classList.toggle('fa-chevron-down', isExpanded);
-                    moreButtonIcon.classList.toggle('fa-chevron-up', !isExpanded);
-                });
-            }
-
-            const showPinButton = document.getElementById('show-pin-button');
-            if (showPinButton) {
-                showPinButton.addEventListener('click', () => {
-                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'false'); 
-                    updateAuthControlsArea();
-                });
-            }
-
-            if (user) {
-                const logoutButton = document.getElementById('logout-button');
-                if (logoutButton) {
-                    logoutButton.addEventListener('click', () => {
-                        auth.signOut().catch(err => console.error("Logout failed:", err));
-                    });
-                }
-            }
-        };
-
-        const updateAuthControlsArea = () => {
-            const authWrapper = document.getElementById('auth-controls-wrapper');
-            if (!authWrapper) return;
-            authWrapper.innerHTML = getAuthControlsHtml();
-            setupPinEventListeners();
-            setupAuthToggleListeners(currentUser); 
-        }
-
-        const checkMarquees = () => {
-            requestAnimationFrame(() => {
-                const containers = document.querySelectorAll('.marquee-container');
-                containers.forEach(container => {
-                    const content = container.querySelector('.marquee-content');
-                    if (!content) return;
-                    container.classList.remove('active');
-                    if (content.nextElementSibling && content.nextElementSibling.classList.contains('marquee-content')) {
-                        content.nextElementSibling.remove();
-                    }
-                    if (content.offsetWidth > container.offsetWidth) {
-                        container.classList.add('active');
-                        const duplicate = content.cloneNode(true);
-                        duplicate.setAttribute('aria-hidden', 'true'); 
-                        content.style.paddingRight = '2rem'; 
-                        duplicate.style.paddingRight = '2rem';
-                        container.appendChild(duplicate);
-                    } else {
-                        content.style.paddingRight = '';
-                    }
-                });
-            });
-        };
-
-        const rerenderNavbar = (preserveScroll = false) => {
-             if (preserveScroll) {
-                const tabContainer = document.querySelector('.tab-scroll-container');
-                if (tabContainer) {
-                    currentScrollLeft = tabContainer.scrollLeft;
-                } else {
-                    currentScrollLeft = 0;
-                }
-            }
-            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
-        };
-
-        const renderNavbar = (user, userData, pages, isPrivilegedUser) => {
-            const container = document.getElementById('navbar-container');
-            if (!container) return; 
-
-            const navElement = container.querySelector('nav');
-            const tabWrapper = navElement.querySelector('.tab-wrapper');
-            const authControlsWrapper = document.getElementById('auth-controls-wrapper');
-            const navbarLogo = document.getElementById('navbar-logo');
-
-            const logoPath = 'https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png'; 
-            if (navbarLogo) {
-               // Only update if needed to avoid flicker
-               if (!navbarLogo.src.includes('4sp-asset-library')) navbarLogo.src = logoPath;
-            }
-            
-            const activePageKey = getCurrentPageKey();
-
-            const tabsHtml = Object.entries(pages || {})
-                .filter(([, page]) => !(page.adminOnly && !isPrivilegedUser)) 
-                .map(([key, page]) => { 
-                    const isActive = (key === activePageKey); 
-                    const activeClass = isActive ? 'active' : '';
-                    const iconClasses = getIconClass(page.icon);
-                    return `<a href="${page.url}" class="nav-tab ${activeClass}"><i class="${iconClasses} mr-2"></i>${page.name}</a>`;
-                }).join('');
-
-            const authControlsHtml = getAuthControlsHtml();
-
-            if (tabWrapper) {
-                tabWrapper.innerHTML = `
-                    <button id="glide-left" class="scroll-glide-button"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="tab-scroll-container">
-                        ${tabsHtml}
-                    </div>
-                    <button id="glide-right" class="scroll-glide-button"><i class="fa-solid fa-chevron-right"></i></button>
-                `;
-            }
-
-            if (authControlsWrapper) {
-                authControlsWrapper.innerHTML = authControlsHtml;
-            }
-            
-            const tabContainer = tabWrapper.querySelector('.tab-scroll-container'); 
-            const tabCount = tabContainer ? tabContainer.querySelectorAll('.nav-tab').length : 0;
-
-            if (tabCount <= 9) {
-                if(tabContainer) {
-                    tabContainer.style.justifyContent = 'center';
-                    tabContainer.style.overflowX = 'hidden';
-                    tabContainer.style.flexGrow = '0';
-                }
-            } else {
-                if(tabContainer) {
-                    tabContainer.style.justifyContent = 'flex-start';
-                    tabContainer.style.overflowX = 'auto';
-                    tabContainer.style.flexGrow = '1';
-                }
-            }
-
-            setupEventListeners(user);
-
-            let savedTheme;
-            try {
-                savedTheme = JSON.parse(localStorage.getItem(THEME_STORAGE_KEY));
-            } catch (e) { savedTheme = null; }
-            window.applyTheme(savedTheme || DEFAULT_THEME); 
-
-            if (currentScrollLeft > 0) {
-                const savedScroll = currentScrollLeft;
-                requestAnimationFrame(() => {
-                    if (tabContainer) tabContainer.scrollLeft = savedScroll;
-                    currentScrollLeft = 0; 
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                });
-            } else if (!hasScrolledToActiveTab) { 
-                const activeTab = document.querySelector('.nav-tab.active');
-                if (activeTab && tabContainer) {
-                    const centerOffset = (tabContainer.offsetWidth - activeTab.offsetWidth) / 2;
-                    const idealCenterScroll = activeTab.offsetLeft - centerOffset;
-                    const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                    const extraRoomOnRight = maxScroll - idealCenterScroll;
-                    let scrollTarget;
-
-                    if (idealCenterScroll > 0 && extraRoomOnRight < centerOffset) {
-                        scrollTarget = maxScroll + 50;
-                    } else {
-                        scrollTarget = Math.max(0, idealCenterScroll);
-                    }
-                    requestAnimationFrame(() => {
-                        tabContainer.scrollLeft = scrollTarget;
-                        requestAnimationFrame(() => {
-                            updateScrollGilders();
-                        });
-                    });
-                    hasScrolledToActiveTab = true; 
-                } else if (tabContainer) {
-                    requestAnimationFrame(() => {
-                        updateScrollGilders();
-                    });
-                }
-            }
-            
-            checkMarquees();
-        };
-
-        const updateScrollGilders = () => {
-            const container = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-            const tabCount = document.querySelectorAll('.nav-tab').length;
-            const isNotScrolling = container && container.style.flexGrow === '0';
-            
-            if (tabCount <= 9 || isNotScrolling) {
-                if (leftButton) leftButton.classList.add('hidden');
-                if (rightButton) rightButton.classList.add('hidden');
-                return; 
-            }
-
-            if (!container || !leftButton || !rightButton) return;
-            const hasHorizontalOverflow = container.scrollWidth > container.offsetWidth + 2; 
-
-            if (hasHorizontalOverflow) {
-                const isScrolledToLeft = container.scrollLeft <= 5;
-                const maxScrollLeft = container.scrollWidth - container.offsetWidth;
-                const isScrolledToRight = (container.scrollLeft + 5) >= maxScrollLeft;
-
-                if (isScrolledToLeft) {
-                    leftButton.classList.add('hidden');
-                } else {
-                    leftButton.classList.remove('hidden');
-                }
-
-                if (isScrolledToRight) {
-                    rightButton.classList.add('hidden');
-                } else {
-                    rightButton.classList.remove('hidden');
-                }
-            } else {
-                leftButton.classList.add('hidden');
-                rightButton.classList.add('hidden');
-            }
-        };
-
-        const forceScrollToRight = () => {
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            if (!tabContainer) return;
-            const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-            requestAnimationFrame(() => {
-                tabContainer.scrollLeft = maxScroll + 50;
-                requestAnimationFrame(() => {
-                    updateScrollGilders();
-                });
-            });
-        };
-        
-        const setupPinEventListeners = () => {
-            const pinButton = document.getElementById('pin-button');
-            const pinContextMenu = document.getElementById('pin-context-menu');
-            const repinButton = document.getElementById('repin-button');
-            const removePinButton = document.getElementById('remove-pin-button');
-            const hidePinButton = document.getElementById('hide-pin-button');
-
-            if (pinButton && pinContextMenu) {
-                pinButton.addEventListener('click', (e) => {
-                    if (pinButton.getAttribute('href') === '#') {
-                        e.preventDefault(); 
-                        const hintShown = localStorage.getItem(PIN_HINT_SHOWN_KEY) === 'true';
-                        if (!hintShown) {
-                            const hintEl = document.getElementById('pin-hint');
-                            if (hintEl) {
-                                hintEl.classList.add('show');
-                                localStorage.setItem(PIN_HINT_SHOWN_KEY, 'true');
-                                setTimeout(() => {
-                                    hintEl.classList.remove('show');
-                                }, 6000); 
-                            }
-                        }
-                        const currentPageKey = getCurrentPageKey();
-                        if (currentPageKey) {
-                            localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                            updatePinButtonArea(); 
-                        } else {
-                            console.warn("This page cannot be pinned as it's not in page-identification.json");
-                        }
-                    }
-                });
-
-                pinButton.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    pinContextMenu.classList.toggle('closed');
-                    pinContextMenu.classList.toggle('open');
-                    document.getElementById('auth-menu-container')?.classList.add('closed');
-                    document.getElementById('auth-menu-container')?.classList.remove('open');
-                });
-            }
-
-            if (repinButton) {
-                repinButton.addEventListener('click', () => {
-                    const currentPageKey = getCurrentPageKey();
-                    if (currentPageKey) {
-                        localStorage.setItem(PINNED_PAGE_KEY, currentPageKey);
-                        updatePinButtonArea(); 
-                    }
-                    pinContextMenu.classList.add('closed');
-                    pinContextMenu.classList.remove('open');
-                });
-            }
-            if (removePinButton) {
-                removePinButton.addEventListener('click', () => {
-                    localStorage.removeItem(PINNED_PAGE_KEY);
-                    updatePinButtonArea(); 
-                });
-            }
-            if (hidePinButton) {
-                hidePinButton.addEventListener('click', () => {
-                    localStorage.setItem(PIN_BUTTON_HIDDEN_KEY, 'true');
-                    updateAuthControlsArea();
-                });
-            }
-        }
-
-        const setupEventListeners = (user) => {
-            const tabContainer = document.querySelector('.tab-scroll-container');
-            const leftButton = document.getElementById('glide-left');
-            const rightButton = document.getElementById('glide-right');
-            const debouncedUpdateGilders = debounce(updateScrollGilders, 50);
-
-            if (tabContainer) {
-                const scrollAmount = tabContainer.offsetWidth * 0.8; 
-                tabContainer.addEventListener('scroll', updateScrollGilders);
-                
-                window.addEventListener('resize', () => {
-                    debouncedUpdateGilders();
-                    applyCounterZoom(); 
-                });
-                
-                if (leftButton) {
-                    leftButton.addEventListener('click', () => {
-                        tabContainer.scrollLeft = 0; 
-                    });
-                }
-                if (rightButton) {
-                    rightButton.addEventListener('click', () => {
-                        const maxScroll = tabContainer.scrollWidth - tabContainer.offsetWidth;
-                        tabContainer.scrollLeft = maxScroll; 
-                    });
-                }
-            }
-
-            setupAuthToggleListeners(user);
-            setupPinEventListeners();
-
-            if (!globalClickListenerAdded) {
-                document.addEventListener('click', (e) => {
-                    const menu = document.getElementById('auth-menu-container');
-                    const toggleButton = document.getElementById('auth-toggle');
-                    
-                    if (menu && menu.classList.contains('open')) {
-                        if (!menu.contains(e.target) && (toggleButton && !toggleButton.contains(e.target))) {
-                            menu.classList.add('closed');
-                            menu.classList.remove('open');
-                        }
-                    }
-                    
-                    const pinButton = document.getElementById('pin-button');
-                    const pinContextMenu = document.getElementById('pin-context-menu');
-
-                    if (pinContextMenu && pinContextMenu.classList.contains('open')) {
-                        if (!pinContextMenu.contains(e.target) && (pinButton && !pinButton.contains(e.target))) {
-                            pinContextMenu.classList.add('closed');
-                            pinContextMenu.classList.remove('open');
-                        }
-                    }
-                });
-                
-                window.addEventListener('pfp-updated', (e) => {
-                    if (!currentUserData) currentUserData = {};
-                    Object.assign(currentUserData, e.detail);
-                    
-                    const username = currentUserData.username || currentUser?.displayName || 'User';
-                    const initial = (currentUserData.letterAvatarText) ? currentUserData.letterAvatarText : username.charAt(0).toUpperCase();
-                    let newContent = '';
-                    
-                    if (currentUserData.pfpType === 'custom' && currentUserData.customPfp) {
-                        newContent = `<img src="${currentUserData.customPfp}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                    } else if (currentUserData.pfpType === 'mibi' && currentUserData.mibiConfig) {
-                        const { eyes, mouths, hats, bgColor, rotation, size, offsetX, offsetY } = currentUserData.mibiConfig;
-                        const scale = (size || 100) / 100;
-                        const rot = rotation || 0;
-                        const x = offsetX || 0;
-                        const y = offsetY || 0;
-
-                        newContent = `
-                            <div class="w-full h-full relative overflow-hidden rounded-full" style="background-color: ${bgColor || '#3B82F6'}">
-                                 <div class="absolute inset-0 w-full h-full" style="transform: translate(${x}%, ${y}%) rotate(${rot}deg) scale(${scale}); transform-origin: center;">
-                                     <img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/head.png" class="absolute inset-0 w-full h-full object-contain">
-                                     ${eyes ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/eyes/${eyes}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                                     ${mouths ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/mouths/${mouths}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                                     ${hats ? `<img src="https://cdn.jsdelivr.net/gh/4simpleproblems-v5/v5-4simpleproblems-dv@main/mibi-avatars/hats/${hats}" class="absolute inset-0 w-full h-full object-contain">` : ''}
-                                 </div>
-                            </div>
-                        `;
-                    } else if (currentUserData.pfpType === 'letter') {
-                        const bg = currentUserData.letterAvatarColor || DEFAULT_THEME['avatar-gradient'];
-                        const textColor = getLetterAvatarTextColor(bg);
-                        const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
-                        newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
-                    } else {
-                        const googleProvider = currentUser?.providerData.find(p => p.providerId === 'google.com');
-                        const googlePhoto = googleProvider ? googleProvider.photoURL : null;
-                        const displayPhoto = googlePhoto || currentUser?.photoURL;
-
-                        if (displayPhoto) {
-                            newContent = `<img src="${displayPhoto}" class="w-full h-full object-cover rounded-full" alt="Profile">`;
-                        } else {
-                            const bg = DEFAULT_THEME['avatar-gradient'];
-                            const textColor = getLetterAvatarTextColor(bg);
-                            const fontSizeClass = initial.length >= 3 ? 'text-xs' : (initial.length === 2 ? 'text-sm' : 'text-base');
-                            newContent = `<div class="initial-avatar w-full h-full rounded-full font-semibold ${fontSizeClass}" style="background: ${bg}; color: ${textColor}">${initial}</div>`;
-                        }
-                    }
-
-                    const authToggle = document.getElementById('auth-toggle');
-                    if (authToggle) {
-                        authToggle.style.transition = 'opacity 0.2s ease';
-                        authToggle.style.opacity = '0';
-                        setTimeout(() => {
-                            authToggle.innerHTML = newContent;
-                            authToggle.style.opacity = '1';
-                        }, 200);
-                    }
-                    const menuAvatar = document.getElementById('auth-menu-avatar-container');
-                    if (menuAvatar) {
-                        menuAvatar.innerHTML = newContent; 
-                    }
-                });
-
-                globalClickListenerAdded = true;
-            }
-        };
-
-        auth.onAuthStateChanged(async (user) => {
-            let isPrivilegedUser = false;
-            let userData = null;
-            if (user) {
-                isPrivilegedUser = user.email === PRIVILEGED_EMAIL;
-
-                try {
-                    const userDocPromise = db.collection('users').doc(user.uid).get();
-                    const adminDocPromise = db.collection('admins').doc(user.uid).get();
-
-                    const [userDoc, adminDoc] = await Promise.all([userDocPromise, adminDocPromise]);
-                    
-                    userData = userDoc.exists ? userDoc.data() : null;
-
-                    if (!isPrivilegedUser && adminDoc.exists) {
-                        isPrivilegedUser = true;
-                    }
-
-                } catch (error) {
-                    console.error("Error fetching user or admin data:", error);
-                }
-            }
-            currentUser = user;
-            currentUserData = userData;
-
-            if (userData && userData.navbarTheme) {
-                window.applyTheme(userData.navbarTheme);
-                localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(userData.navbarTheme));
-            }
-
-            currentIsPrivileged = isPrivilegedUser;
-            renderNavbar(currentUser, currentUserData, allPages, currentIsPrivileged);
-
-            if (!authCheckCompleted) {
-                authCheckCompleted = true;
-            }
-
-            if (authCheckCompleted && !user && !isRedirecting && !window._LOCAL_MODE) {
-                // If we are in "one file" local mode (injected via 4simpleproblems-v5.html), we might have a mock user or no auth requirement.
-                // However, the original code had a redirect. 
-                // We'll keep the redirect but respecting the 'window._LOCAL_MODE' flag if it exists (added in v5 html).
-                const targetUrl = '../index.html'; 
-                console.log(`User logged out. Restricting access and redirecting to ${targetUrl}`);
-                isRedirecting = true; 
-                window.location.href = targetUrl;
-            }
-        });
-    };
-
     if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-} else {
-    run();
-}
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
 })();

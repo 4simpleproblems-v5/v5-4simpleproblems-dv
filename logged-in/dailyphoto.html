@@ -216,7 +216,7 @@
             position: absolute; bottom: 0.5rem; left: 0.5rem; right: 0.5rem;
             color: white; font-size: 0.85rem; font-weight: 500;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            z-index: 10;
+            z-index: 10; padding-right: 30px; /* Space for DV tag */
         }
         
         .photo-thumbnail .flex span { border-radius: 0.5rem; }
@@ -1095,7 +1095,8 @@ async function cleanText(text) {
                         hearts: [],
                         comments: [],
                         isPublic: isPublic,
-                        status: 'active'
+                        status: 'active',
+                        platform: window._LOCAL_MODE ? 'DV' : 'WEB'
                     });
 
                     const userRef = doc(db, USERS_COLLECTION, auth.currentUser.uid);
@@ -1146,6 +1147,8 @@ async function cleanText(text) {
             posts.forEach(data => {
                 const el = document.createElement('div');
                 el.className = 'photo-thumbnail';
+                const dvTag = data.platform === 'DV' ? `<span class="absolute bottom-1 right-1 text-[9px] font-bold text-white bg-indigo-600 px-1.5 py-0.5 rounded z-20" title="Posted from 4SP Downloadable Version">DV</span>` : '';
+                
                 el.innerHTML = `
                     <img src="${data.imageBase64}" loading="lazy">
                     <div class="overlay"></div>
@@ -1154,6 +1157,7 @@ async function cleanText(text) {
                         <span class="text-white text-xs bg-black/50 px-2 py-1 rounded-lg backdrop-blur-sm" title="Comments"><i class="fas fa-comment text-indigo-400"></i> ${formatCount(data.commentCount)}</span>
                     </div>
                     <div class="title-overlay">${data.title}</div>
+                    ${dvTag}
                 `;
                 el.onclick = () => window.openPhotoModal(data.id);
                 feed.appendChild(el);

@@ -32,7 +32,7 @@
             box-sizing: border-box;
             flex-shrink: 0;
         }
-        .navbar-logo { height: 32px; width: auto; }
+        .navbar-logo { height: 40px; width: auto; }
         .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; justify-content: center; overflow: hidden; }
         .tab-scroll-container { 
             display: flex; align-items: center; gap: 0.5rem; overflow-x: auto; 
@@ -41,8 +41,8 @@
         .tab-scroll-container::-webkit-scrollbar { display: none; }
         
         .nav-tab { 
-            padding: 0.5rem 0.75rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; 
-            border-radius: 0.5rem; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1rem; color: #9ca3af; font-size: 0.875rem; font-weight: 500; 
+            border-radius: 9999px; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;
             border: 1px solid transparent; transition: all 0.2s; cursor: pointer;
         }
         .nav-tab:hover { color: #ffffff; background-color: rgba(79, 70, 229, 0.05); }
@@ -53,16 +53,18 @@
         .icon-btn {
             width: 40px; height: 40px; border-radius: 50%; border: 1px solid #4b5563; 
             display: flex; align-items: center; justify-content: center; color: #d1d5db; 
-            cursor: pointer; background: transparent; transition: background 0.2s;
+            cursor: pointer; background: transparent; transition: background 0.2s; position: relative;
         }
         .icon-btn:hover { background-color: #374151; color: white; }
 
-        .auth-menu {
+        .auth-menu, .pin-context-menu {
             position: absolute; right: 0; top: 50px; width: 14rem;
             background: #000; border: 1px solid #374151; border-radius: 0.75rem;
             padding: 0.5rem; display: none; flex-direction: column; gap: 0.25rem; z-index: 50;
         }
-        .auth-menu.open { display: flex; }
+        .pin-context-menu { right: auto; left: 0; width: 12rem; }
+        .auth-menu.open, .pin-context-menu.open { display: flex; }
+        
         .auth-menu-item {
             display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem;
             color: #d1d5db; border-radius: 0.5rem; text-decoration: none; font-size: 0.875rem;
@@ -95,10 +97,23 @@
         </div>
 
         <div class="auth-controls-wrapper">
-            <!-- Pin Button -->
-            <button id="pin-btn" class="icon-btn" title="Pin this page">
-                <i class="fa-solid fa-thumbtack"></i>
-            </button>
+            <!-- Pin Button Wrapper -->
+            <div class="relative" id="pin-wrapper">
+                <button id="pin-btn" class="icon-btn" title="Pin this page">
+                    <i class="fa-solid fa-thumbtack"></i>
+                </button>
+                <div id="pin-menu" class="pin-context-menu">
+                    <div class="auth-menu-item" id="repin-btn">
+                        <i class="fa-solid fa-thumbtack w-4"></i> Repin
+                    </div>
+                    <div class="auth-menu-item text-red-400 hover:text-red-300" id="remove-pin-btn">
+                        <i class="fa-solid fa-xmark w-4"></i> Remove Pin
+                    </div>
+                    <div class="auth-menu-item text-red-400 hover:text-red-300" id="hide-pin-btn">
+                        <i class="fa-solid fa-eye-slash w-4"></i> Hide Button
+                    </div>
+                </div>
+            </div>
 
             <!-- Auth Profile -->
             <div class="relative">
@@ -107,14 +122,17 @@
                 </button>
                 <div id="auth-menu" class="auth-menu">
                     <div class="auth-header">
-                        <div class="auth-username">Client User</div>
-                        <div class="auth-email">local@client</div>
+                        <div class="auth-username" id="display-username">Client User</div>
+                        <div class="auth-email" id="display-email">local@client</div>
                     </div>
                     <a href="#" class="auth-menu-item" onclick="loadPage('settings.html'); return false;">
-                        <i class="fa-solid fa-gear"></i> Settings
+                        <i class="fa-solid fa-gear w-4"></i> Settings
                     </a>
+                    <div class="auth-menu-item hidden" id="show-pin-menu-item">
+                        <i class="fa-solid fa-eye w-4"></i> Show Pin Button
+                    </div>
                     <div class="auth-menu-item text-red-400 hover:text-red-300" id="logout-btn">
-                        <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                        <i class="fa-solid fa-right-from-bracket w-4"></i> (Disconnect)
                     </div>
                 </div>
             </div>
@@ -150,14 +168,28 @@
         
         // Navbar elements
         const tabsContainer = document.getElementById('tabs-container');
+        
+        // Pin Elements
+        const pinWrapper = document.getElementById('pin-wrapper');
         const pinBtn = document.getElementById('pin-btn');
+        const pinMenu = document.getElementById('pin-menu');
+        const repinBtn = document.getElementById('repin-btn');
+        const removePinBtn = document.getElementById('remove-pin-btn');
+        const hidePinBtn = document.getElementById('hide-pin-btn');
+        const showPinMenuItem = document.getElementById('show-pin-menu-item');
+
+        // Auth Elements
         const authBtn = document.getElementById('auth-btn');
         const authMenu = document.getElementById('auth-menu');
         const logoutBtn = document.getElementById('logout-btn');
+        const displayUsername = document.getElementById('display-username');
+        const displayEmail = document.getElementById('display-email');
 
         const BASE_URL = 'https://cdn.jsdelivr.net/npm/4sp-dv@latest/logged-in/';
         const STORAGE_KEY = 'local_access_code';
         const PINNED_PAGE_KEY = 'local_pinned_page';
+        const PIN_HIDDEN_KEY = 'local_pin_hidden';
+        const USER_DATA_KEY = 'local_user_data';
 
         const PAGE_DATA = {
             "dashboard": { "name": "Dashboard", "icon": "fa-solid fa-house-user", "url": "dashboard.html" },
@@ -171,12 +203,12 @@
             "settings": { "name": "Settings", "icon": "fa-solid fa-gear", "url": "settings.html" }
         };
 
+        let currentUser = null;
+
         // --- Navbar Logic ---
         function renderNavbar(activePageUrl) {
             tabsContainer.innerHTML = '';
             
-            // Normalize activePageUrl to match key or url in PAGE_DATA
-            // remove base url if present
             let currentPath = activePageUrl.replace(BASE_URL, '');
             
             Object.values(PAGE_DATA).forEach(page => {
@@ -195,39 +227,113 @@
             } else {
                 pinBtn.style.color = '#d1d5db';
             }
+
+            // Update Pin Visibility
+            const isHidden = localStorage.getItem(PIN_HIDDEN_KEY) === 'true';
+            if (isHidden) {
+                pinWrapper.classList.add('hidden');
+                showPinMenuItem.classList.remove('hidden');
+                showPinMenuItem.onclick = () => {
+                    localStorage.setItem(PIN_HIDDEN_KEY, 'false');
+                    renderNavbar(activePageUrl);
+                };
+            } else {
+                pinWrapper.classList.remove('hidden');
+                showPinMenuItem.classList.add('hidden');
+            }
+        }
+
+        // --- Pin Logic ---
+        function getCurrentPage() {
+            const currentFrameSrc = appFrame.contentWindow.location.href;
+            let pageName = currentFrameSrc.replace(BASE_URL, '');
+            if (!pageName || pageName === 'about:blank') pageName = window.lastLoadedPage || 'dashboard.html';
+            return pageName;
         }
 
         pinBtn.addEventListener('click', () => {
-            const currentFrameSrc = appFrame.contentWindow.location.href;
-            let pageName = currentFrameSrc.replace(BASE_URL, '');
-            // Fallback if currentFrameSrc is about:blank or empty
-            if (!pageName || pageName === 'about:blank') pageName = window.lastLoadedPage || 'dashboard.html';
-
+            const pageName = getCurrentPage();
             const currentPinned = localStorage.getItem(PINNED_PAGE_KEY);
             
             if (currentPinned === pageName) {
-                localStorage.removeItem(PINNED_PAGE_KEY); // Unpin
+                localStorage.removeItem(PINNED_PAGE_KEY);
             } else {
-                localStorage.setItem(PINNED_PAGE_KEY, pageName); // Pin
+                localStorage.setItem(PINNED_PAGE_KEY, pageName);
             }
             renderNavbar(pageName);
         });
 
+        // Context Menu
+        pinBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            pinMenu.classList.toggle('open');
+            authMenu.classList.remove('open');
+        });
+
+        repinBtn.addEventListener('click', () => {
+            localStorage.setItem(PINNED_PAGE_KEY, getCurrentPage());
+            renderNavbar(getCurrentPage());
+            pinMenu.classList.remove('open');
+        });
+
+        removePinBtn.addEventListener('click', () => {
+            localStorage.removeItem(PINNED_PAGE_KEY);
+            renderNavbar(getCurrentPage());
+            pinMenu.classList.remove('open');
+        });
+
+        hidePinBtn.addEventListener('click', () => {
+            localStorage.setItem(PIN_HIDDEN_KEY, 'true');
+            renderNavbar(getCurrentPage());
+            pinMenu.classList.remove('open');
+        });
+
+        // Auth Menu
         authBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             authMenu.classList.toggle('open');
+            pinMenu.classList.remove('open');
         });
 
         document.addEventListener('click', (e) => {
             if (!authMenu.contains(e.target) && !authBtn.contains(e.target)) {
                 authMenu.classList.remove('open');
             }
+            if (!pinMenu.contains(e.target) && !pinBtn.contains(e.target)) {
+                pinMenu.classList.remove('open');
+            }
         });
 
         logoutBtn.addEventListener('click', () => {
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(USER_DATA_KEY);
             location.reload();
         });
+
+        async function fetchUserData(ownerUid) {
+            try {
+                const userDoc = await getDoc(doc(db, "users", ownerUid));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    const userData = {
+                        uid: ownerUid,
+                        username: data.username || "User",
+                        email: data.email || "No email"
+                    };
+                    localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+                    updateUIWithUser(userData);
+                    currentUser = userData; // Set global
+                }
+            } catch (e) {
+                console.error("Error fetching user data:", e);
+            }
+        }
+
+        function updateUIWithUser(userData) {
+            if (!userData) return;
+            displayUsername.textContent = userData.username;
+            displayEmail.textContent = userData.email;
+        }
 
         // --- Auto-Login Logic ---
         async function checkAutoLogin() {
@@ -242,6 +348,21 @@
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists() && docSnap.data().active) {
+                        const codeData = docSnap.data();
+                        
+                        // Check for cached user data first
+                        let userData = null;
+                        try {
+                            userData = JSON.parse(localStorage.getItem(USER_DATA_KEY));
+                        } catch(e){}
+
+                        if (userData && userData.uid === codeData.ownerUid) {
+                             updateUIWithUser(userData);
+                             currentUser = userData;
+                        } else {
+                            await fetchUserData(codeData.ownerUid);
+                        }
+
                         launchApp();
                         return;
                     } else {
@@ -298,9 +419,13 @@
                     throw new Error("Code is inactive.");
                 }
 
+                // Claim it!
                 await updateDoc(docRef, { claimed: true });
                 localStorage.setItem(STORAGE_KEY, code);
                 
+                // Fetch User Data immediately
+                await fetchUserData(data.ownerUid);
+
                 launchApp();
 
             } catch (e) {
@@ -326,7 +451,6 @@
             if (pageName.startsWith('../')) pageName = pageName.substring(3);
             if (pageName.startsWith(BASE_URL)) pageName = pageName.substring(BASE_URL.length);
             
-            // Store for pin logic reference
             window.lastLoadedPage = pageName;
             renderNavbar(pageName);
 
@@ -346,9 +470,9 @@
                             window._CURRENT_PAGE_NAME = "${pageName}";
                             
                             window.currentUser = {
-                                uid: 'client-user',
-                                displayName: 'Client User',
-                                email: 'client@4sp',
+                                uid: '${currentUser ? currentUser.uid : "client-user"}',
+                                displayName: '${currentUser ? currentUser.username : "Client User"}',
+                                email: '${currentUser ? currentUser.email : "local@client"}',
                                 photoURL: null,
                                 providerData: []
                             };

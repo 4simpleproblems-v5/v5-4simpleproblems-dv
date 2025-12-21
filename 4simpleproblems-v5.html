@@ -359,7 +359,7 @@
                         if (userData && userData.uid === codeData.ownerUid) {
                              updateUIWithUser(userData);
                              currentUser = userData;
-                        } else {
+                        } else if (codeData.ownerUid) {
                             await fetchUserData(codeData.ownerUid);
                         }
 
@@ -424,7 +424,9 @@
                 localStorage.setItem(STORAGE_KEY, code);
                 
                 // Fetch User Data immediately
-                await fetchUserData(data.ownerUid);
+                if (data.ownerUid) {
+                    await fetchUserData(data.ownerUid);
+                }
 
                 launchApp();
 

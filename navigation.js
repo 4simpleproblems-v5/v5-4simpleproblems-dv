@@ -9,7 +9,7 @@
 // =========================================================================
 // >> ACTION REQUIRED: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE <<
 // =========================================================================
-const FIREBASE_CONFIG = {
+var FIREBASE_CONFIG = window.FIREBASE_CONFIG || {
     apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
     authDomain: "project-zirconium.firebaseapp.com",
     projectId: "project-zirconium",
@@ -1179,6 +1179,8 @@ let db;
         navbar.style.transform = `scale(${scale})`;
         navbar.style.width = `${dpr * 100}%`;
     };
+
+    const run = () => initializeApp(PAGE_IDENTIFICATION_DATA, FIREBASE_CONFIG);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', run);

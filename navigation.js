@@ -33,7 +33,7 @@ const PAGE_IDENTIFICATION_DATA = {
     "games-4sp": { "name": "Games", "icon": "fa-solid fa-gamepad", "url": "../GAMES/index.html" },
     "levium": { "name": "Levium", "icon": "fa-solid fa-globe", "url": "../logged-in/levium.html", "adminOnly": true },
     "securly-tester": { "name": "Securly Tester", "icon": "fa-solid fa-shield-alt", "url": "../logged-in/securly-tester.html" },
-    "settings": { "name": "Settings", "icon": "fa-solid fa-gear", "url": "../logged-in/settings.html" },
+    "settings": { "name": "Settings", "icon": "fa-solid fa-gear", "url": "#settings" },
     "analytics": { "name": "Analytics", "icon": "fa-solid fa-chart-line", "url": "../logged-in/analytics.html", "adminOnly": true }
 };
 
@@ -469,7 +469,7 @@ let db;
                                 </div>
                             </div>
                         </div>
-                        <a href="/logged-in/settings.html" class="auth-menu-link">
+                        <a href="#settings" class="auth-menu-link">
                             <i class="fa-solid fa-gear w-4"></i>
                             Settings
                         </a>

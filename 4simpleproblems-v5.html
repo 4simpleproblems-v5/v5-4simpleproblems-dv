@@ -156,11 +156,144 @@
         </div>
     </div>
 
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-[#0a0a0a] w-full max-w-5xl h-[85vh] rounded-2xl border border-[#252525] flex overflow-hidden shadow-2xl relative">
+            <button id="close-settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white z-10">
+                <i class="fa-solid fa-xmark fa-xl"></i>
+            </button>
+            
+            <!-- Sidebar -->
+            <div class="w-64 bg-black border-r border-[#252525] flex flex-col p-4 gap-2 flex-shrink-0">
+                <h2 class="text-xl text-white font-bold mb-6 pl-2">Settings</h2>
+                <button class="settings-tab-btn active text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="general">
+                    <i class="fa-solid fa-gear w-5"></i> General
+                </button>
+                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="personalization">
+                    <i class="fa-solid fa-palette w-5"></i> Personalization
+                </button>
+                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="privacy">
+                    <i class="fa-solid fa-shield-halved w-5"></i> Privacy & Security
+                </button>
+                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="about">
+                    <i class="fa-solid fa-circle-info w-5"></i> About 4SP
+                </button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-grow p-8 overflow-y-auto bg-[#0a0a0a]" id="settings-content">
+                <!-- General Tab -->
+                <div id="tab-general" class="settings-section">
+                    <h3 class="text-2xl text-white font-bold mb-6">General Settings</h3>
+                    <div class="mb-6">
+                        <label class="block text-gray-400 text-sm mb-2">Username</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="settings-username-input" class="bg-[#111] border border-[#333] text-white rounded-lg px-4 py-2 w-full max-w-md focus:border-indigo-500 outline-none transition" placeholder="New Username">
+                            <button id="save-username-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition">Save</button>
+                        </div>
+                        <p id="username-msg" class="text-sm mt-2 min-h-[20px]"></p>
+                    </div>
+                </div>
+
+                <!-- Personalization Tab -->
+                <div id="tab-personalization" class="settings-section hidden">
+                    <h3 class="text-2xl text-white font-bold mb-6">Personalization</h3>
+                    
+                    <!-- Profile Picture -->
+                    <div class="mb-8 p-6 bg-[#111] rounded-xl border border-[#252525]">
+                        <h4 class="text-lg text-white font-semibold mb-4">Profile Picture</h4>
+                        <div class="flex items-start gap-6">
+                            <div class="flex flex-col items-center gap-2">
+                                <div id="pfp-preview" class="w-24 h-24 rounded-full bg-gray-700 overflow-hidden border-2 border-[#333] flex items-center justify-center text-3xl font-bold text-white relative">
+                                    <!-- IMG or Initial injected here -->
+                                </div>
+                                <p class="text-xs text-gray-500">Preview</p>
+                            </div>
+                            
+                            <div class="flex-grow">
+                                <div class="flex gap-4 mb-4 border-b border-[#333] pb-4">
+                                    <button class="pfp-mode-btn active px-3 py-1 rounded-lg text-sm text-gray-300 hover:bg-[#222] transition" data-mode="letter">Letter Avatar</button>
+                                    <button class="pfp-mode-btn px-3 py-1 rounded-lg text-sm text-gray-300 hover:bg-[#222] transition" data-mode="upload">Upload Image</button>
+                                </div>
+
+                                <!-- Letter Mode -->
+                                <div id="pfp-letter-options" class="block">
+                                    <div class="grid grid-cols-6 gap-2 mb-4 max-w-xs">
+                                        <!-- Colors injected via JS -->
+                                    </div>
+                                    <button id="save-letter-pfp-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">Set Letter Avatar</button>
+                                </div>
+
+                                <!-- Upload Mode -->
+                                <div id="pfp-upload-options" class="hidden">
+                                    <input type="file" id="pfp-upload-input" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#222] file:text-white hover:file:bg-[#333] mb-4"/>
+                                    <p class="text-xs text-gray-500 mb-4">Max size 2MB. Square images work best.</p>
+                                    <button id="save-upload-pfp-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">Upload & Set</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Theme -->
+                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525]">
+                        <h4 class="text-lg text-white font-semibold mb-4">Theme</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="theme-grid">
+                            <!-- Themes injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy Tab -->
+                <div id="tab-privacy" class="settings-section hidden">
+                    <h3 class="text-2xl text-white font-bold mb-6">Privacy & Security</h3>
+                    
+                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525]">
+                        <h4 class="text-lg text-white font-semibold mb-2">Panic Key</h4>
+                        <p class="text-sm text-gray-400 mb-4">Pressing this key will immediately redirect you to Google.</p>
+                        
+                        <div class="flex items-center gap-4">
+                            <div class="relative">
+                                <input type="text" id="panic-key-input" maxlength="1" class="w-16 h-16 bg-[#0a0a0a] border border-[#333] rounded-xl text-center text-2xl text-white focus:border-red-500 outline-none uppercase font-mono transition" placeholder="-">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm text-gray-300">Current Key: <span id="current-panic-key" class="text-red-400 font-mono font-bold">NONE</span></span>
+                                <button id="save-panic-key-btn" class="text-xs text-blue-400 hover:text-blue-300 mt-1 text-left">Save Key</button>
+                                <button id="clear-panic-key-btn" class="text-xs text-gray-500 hover:text-gray-400 mt-1 text-left">Clear Key</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About Tab -->
+                <div id="tab-about" class="settings-section hidden">
+                    <h3 class="text-2xl text-white font-bold mb-6">About 4SP</h3>
+                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525] flex flex-col items-center text-center">
+                        <img src="https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png" class="h-24 mb-4" alt="Logo">
+                        <h1 class="text-3xl font-bold text-white mb-2">4SimpleProblems</h1>
+                        <p class="text-gray-400 mb-6 max-w-lg">A comprehensive student toolkit and entertainment platform.</p>
+                        
+                        <div class="inline-block bg-[#0a0a0a] border border-[#333] px-4 py-2 rounded-full mb-8">
+                            <span class="text-gray-500 text-sm">Version</span>
+                            <span class="text-indigo-400 font-mono font-bold ml-2">5.0.0 DV</span>
+                        </div>
+                        
+                        <div class="flex gap-4">
+                            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa-brands fa-github fa-xl"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa-brands fa-youtube fa-xl"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa-brands fa-discord fa-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <iframe id="app-frame"></iframe>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAZBKAckVa4IMvJGjcyndZx6Y1XD52lgro",
@@ -475,6 +608,12 @@
 
         // --- Page Loader ---
         window.loadPage = function(pageName) {
+            // Intercept Settings
+            if (pageName === 'settings.html' || pageName === 'settings') {
+                openSettings();
+                return;
+            }
+
             // Normalize path
             if (pageName.startsWith('./')) pageName = pageName.substring(2);
             if (pageName.startsWith('../')) pageName = pageName.substring(3);
@@ -516,11 +655,23 @@
                                 providerData: []
                             };
 
+                            // --- Parent Communication ---
+                            window.openSettings = function() {
+                                window.parent.openSettings();
+                            };
+
                             document.addEventListener('click', e => {
                                 const link = e.target.closest('a');
                                 if (link && link.href) {
-                                    e.preventDefault();
                                     const href = link.getAttribute('href');
+                                    // Check if it's settings
+                                    if (href.includes('settings.html') || href === '#settings') {
+                                        e.preventDefault();
+                                        window.parent.openSettings();
+                                        return;
+                                    }
+                                    
+                                    e.preventDefault();
                                     window.parent.loadPage(href);
                                 }
                             });
@@ -536,6 +687,314 @@
                     alert("Failed to load page: " + pageName);
                 });
         };
+
+        // --- Settings Logic ---
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const settingsTabs = document.querySelectorAll('.settings-tab-btn');
+        const settingsSections = document.querySelectorAll('.settings-section');
+        
+        window.openSettings = function() {
+            settingsOverlay.classList.remove('hidden');
+            loadSettingsData();
+        };
+        
+        function closeSettings() {
+            settingsOverlay.classList.add('hidden');
+        }
+        
+        closeSettingsBtn.addEventListener('click', closeSettings);
+        
+        // Tab Switching
+        settingsTabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update buttons
+                settingsTabs.forEach(b => {
+                    b.classList.remove('active', 'text-white', 'bg-[#1a1a1a]'); 
+                    b.classList.add('text-gray-300'); 
+                });
+                btn.classList.add('active', 'text-white', 'bg-[#1a1a1a]');
+                btn.classList.remove('text-gray-300');
+                
+                // Show Content
+                const tabId = btn.dataset.tab;
+                settingsSections.forEach(sec => {
+                    if (sec.id === `tab-${tabId}`) sec.classList.remove('hidden');
+                    else sec.classList.add('hidden');
+                });
+            });
+        });
+
+        // --- Settings Data & Actions ---
+        
+        // --- 1. General: Username ---
+        const settingsUsernameInput = document.getElementById('settings-username-input');
+        const saveUsernameBtn = document.getElementById('save-username-btn');
+        const usernameMsg = document.getElementById('username-msg');
+        
+        async function checkProfanity(text) {
+            try {
+                const res = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+                return (await res.text()) === 'true';
+            } catch { return false; }
+        }
+
+        saveUsernameBtn.addEventListener('click', async () => {
+            if (!currentUser) return;
+            const newName = settingsUsernameInput.value.trim();
+            usernameMsg.innerText = "Checking...";
+            usernameMsg.className = "text-gray-500 text-xs mt-2 min-h-[20px]";
+            
+            if (newName.length < 3 || newName.length > 20) {
+                usernameMsg.innerText = "Username must be 3-20 characters.";
+                usernameMsg.className = "text-red-400 text-xs mt-2 min-h-[20px]";
+                return;
+            }
+            
+            if (await checkProfanity(newName)) {
+                usernameMsg.innerText = "Username not allowed.";
+                usernameMsg.className = "text-red-400 text-xs mt-2 min-h-[20px]";
+                return;
+            }
+            
+            try {
+                // Check if taken
+                const q = query(collection(db, "users"), where("username", "==", newName));
+                const snap = await getDocs(q);
+                if (!snap.empty && snap.docs[0].id !== currentUser.uid) {
+                    usernameMsg.innerText = "Username taken.";
+                    usernameMsg.className = "text-red-400 text-xs mt-2 min-h-[20px]";
+                    return;
+                }
+                
+                // Save
+                await updateDoc(doc(db, "users", currentUser.uid), { username: newName });
+                currentUser.username = newName;
+                localStorage.setItem(USER_DATA_KEY, JSON.stringify(currentUser));
+                updateUIWithUser(currentUser);
+                usernameMsg.innerText = "Saved!";
+                usernameMsg.className = "text-green-400 text-xs mt-2 min-h-[20px]";
+                
+            } catch (e) {
+                console.error(e);
+                usernameMsg.innerText = "Error saving.";
+                usernameMsg.className = "text-red-400 text-xs mt-2 min-h-[20px]";
+            }
+        });
+
+        // --- 2. Personalization ---
+        // Letter Avatar Setup
+        const letterColors = ['EF4444', 'F97316', 'F59E0B', '84CC16', '10B981', '06B6D4', '3B82F6', '6366F1', '8B5CF6', 'EC4899', '6B7280'];
+        const pfpModeBtns = document.querySelectorAll('.pfp-mode-btn');
+        const pfpLetterOptions = document.getElementById('pfp-letter-options');
+        const pfpUploadOptions = document.getElementById('pfp-upload-options');
+        const pfpPreview = document.getElementById('pfp-preview');
+        const saveLetterPfpBtn = document.getElementById('save-letter-pfp-btn');
+        
+        let pfpState = { mode: 'letter', letterColor: '#3B82F6' };
+
+        pfpModeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                pfpModeBtns.forEach(b => b.classList.remove('active', 'bg-[#222]'));
+                btn.classList.add('active', 'bg-[#222]');
+                
+                const mode = btn.dataset.mode;
+                pfpState.mode = mode;
+                
+                if (mode === 'letter') {
+                    pfpLetterOptions.classList.remove('hidden');
+                    pfpUploadOptions.classList.add('hidden');
+                    updatePfpPreview();
+                } else {
+                    pfpLetterOptions.classList.add('hidden');
+                    pfpUploadOptions.classList.remove('hidden');
+                }
+            });
+        });
+        
+        // Render Color Grid
+        const gridContainer = pfpLetterOptions.querySelector('.grid');
+        letterColors.forEach(color => {
+            const div = document.createElement('div');
+            div.className = 'w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition border-2 border-transparent';
+            div.style.backgroundColor = '#' + color;
+            div.onclick = () => {
+                pfpState.letterColor = '#' + color;
+                updatePfpPreview();
+            };
+            gridContainer.appendChild(div);
+        });
+
+        function updatePfpPreview() {
+            if (pfpState.mode === 'letter') {
+                const initial = currentUser ? (currentUser.username || "U").charAt(0).toUpperCase() : "U";
+                pfpPreview.style.backgroundImage = 'none';
+                pfpPreview.style.backgroundColor = pfpState.letterColor;
+                pfpPreview.innerText = initial;
+            }
+        }
+        
+        saveLetterPfpBtn.addEventListener('click', async () => {
+            if (!currentUser) return;
+            saveLetterPfpBtn.innerText = "Saving...";
+            try {
+                await updateDoc(doc(db, "users", currentUser.uid), {
+                    pfpType: 'letter',
+                    pfpLetterBg: pfpState.letterColor,
+                    letterAvatarColor: pfpState.letterColor // Legacy support
+                });
+                // Update local logic if needed
+                currentUser.pfpType = 'letter';
+                currentUser.pfpLetterBg = pfpState.letterColor;
+                localStorage.setItem(USER_DATA_KEY, JSON.stringify(currentUser));
+                saveLetterPfpBtn.innerText = "Saved!";
+                setTimeout(() => saveLetterPfpBtn.innerText = "Set Letter Avatar", 2000);
+            } catch(e) {
+                console.error(e);
+                saveLetterPfpBtn.innerText = "Error";
+            }
+        });
+
+        // Upload Logic
+        const pfpUploadInput = document.getElementById('pfp-upload-input');
+        const saveUploadPfpBtn = document.getElementById('save-upload-pfp-btn');
+        
+        pfpUploadInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    pfpPreview.innerText = "";
+                    pfpPreview.style.backgroundColor = "transparent";
+                    pfpPreview.style.backgroundImage = `url('${evt.target.result}')`;
+                    pfpPreview.style.backgroundSize = "cover";
+                    pfpPreview.style.backgroundPosition = "center";
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        saveUploadPfpBtn.addEventListener('click', async () => {
+            const file = pfpUploadInput.files[0];
+            if (!file || !currentUser) return;
+            
+            if (file.size > 2 * 1024 * 1024) {
+                alert("File too large");
+                return;
+            }
+            
+            saveUploadPfpBtn.innerText = "Uploading...";
+            
+            const reader = new FileReader();
+            reader.onload = async evt => {
+                const base64 = evt.target.result;
+                try {
+                    await updateDoc(doc(db, "users", currentUser.uid), {
+                        pfpType: 'custom',
+                        customPfp: base64
+                    });
+                    currentUser.pfpType = 'custom';
+                    currentUser.customPfp = base64;
+                    localStorage.setItem(USER_DATA_KEY, JSON.stringify(currentUser));
+                    
+                    saveUploadPfpBtn.innerText = "Saved!";
+                    setTimeout(() => saveUploadPfpBtn.innerText = "Upload & Set", 2000);
+                } catch(e) {
+                    console.error(e);
+                    saveUploadPfpBtn.innerText = "Error";
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Theme Logic
+        const themeGrid = document.getElementById('theme-grid');
+        const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint', 'Pink']; // Define light theme names
+        // (Assuming you have a way to fetch themes or define them locally. For now, we'll hardcode a few common ones or fetch)
+        // Since we are simplifying, let's just fetch themes.json like the old settings page
+        
+        async function loadThemes() {
+            try {
+                const res = await fetch('logged-in/themes.json'); // Might need adjustment based on path
+                if (!res.ok) return;
+                const themes = await res.json();
+                
+                themeGrid.innerHTML = '';
+                themes.forEach(theme => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex flex-col items-center gap-2 p-2 rounded-lg hover:bg-[#222] transition";
+                    btn.innerHTML = `
+                        <div class="w-full aspect-video rounded-md bg-gradient-to-br from-gray-700 to-gray-900 border border-[#333]" style="background: ${theme['navbar-bg']}"></div>
+                        <span class="text-xs text-gray-400">${theme.name}</span>
+                    `;
+                    btn.onclick = () => applyTheme(theme);
+                    themeGrid.appendChild(btn);
+                });
+            } catch(e) { console.error("Themes error", e); }
+        }
+        
+        function applyTheme(theme) {
+            // Apply logic (simplified from navigation.js)
+            const root = document.documentElement;
+            for (const [key, value] of Object.entries(theme)) {
+                if (key !== 'logo-src' && key !== 'name') {
+                    root.style.setProperty(`--${key}`, value);
+                }
+            }
+            // Save to local storage for persistence on reload
+            // Note: navigation.js handles loading it, so we just need to save to the key it expects
+            // Check navigation.js for key: 'user-navbar-theme'
+            localStorage.setItem('user-navbar-theme', JSON.stringify(theme));
+            
+            // Also update user doc if logged in
+            if (currentUser) {
+                updateDoc(doc(db, "users", currentUser.uid), { navbarTheme: theme }).catch(console.error);
+            }
+        }
+
+        // --- 3. Privacy: Panic Key ---
+        const panicKeyInput = document.getElementById('panic-key-input');
+        const currentPanicKeyDisplay = document.getElementById('current-panic-key');
+        const savePanicKeyBtn = document.getElementById('save-panic-key-btn');
+        const clearPanicKeyBtn = document.getElementById('clear-panic-key-btn');
+        
+        // Load Panic Key
+        const PANIC_KEY_STORAGE = 'local_panic_key';
+        let currentPanicKey = localStorage.getItem(PANIC_KEY_STORAGE);
+        if (currentPanicKey) currentPanicKeyDisplay.innerText = currentPanicKey;
+        
+        savePanicKeyBtn.addEventListener('click', () => {
+            const key = panicKeyInput.value.trim().toUpperCase();
+            if (key && key.length === 1) {
+                localStorage.setItem(PANIC_KEY_STORAGE, key);
+                currentPanicKey = key;
+                currentPanicKeyDisplay.innerText = key;
+                panicKeyInput.value = '';
+            }
+        });
+        
+        clearPanicKeyBtn.addEventListener('click', () => {
+            localStorage.removeItem(PANIC_KEY_STORAGE);
+            currentPanicKey = null;
+            currentPanicKeyDisplay.innerText = "NONE";
+        });
+        
+        // Global Panic Listener
+        window.addEventListener('keydown', (e) => {
+            if (currentPanicKey && e.key.toUpperCase() === currentPanicKey && !e.ctrlKey && !e.altKey && !e.metaKey && e.target.tagName !== 'INPUT') {
+                window.location.href = "https://google.com";
+            }
+        });
+
+        // --- Helper: Load Data into Settings ---
+        function loadSettingsData() {
+            if (currentUser) {
+                settingsUsernameInput.value = currentUser.username || "";
+                pfpState.letterColor = currentUser.pfpLetterBg || '#3B82F6';
+                updatePfpPreview();
+            }
+            loadThemes();
+        }
 
         checkAutoLogin();
 

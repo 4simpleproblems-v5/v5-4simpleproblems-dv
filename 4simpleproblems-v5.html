@@ -440,16 +440,43 @@
             navbar.style.display = 'flex'; // Show navbar
             appFrame.style.display = 'block';
             
-            // Check for pinned page
+            // Determine start page
+            let startPage = 'dashboard.html';
             const pinned = localStorage.getItem(PINNED_PAGE_KEY);
-            loadPage(pinned || 'dashboard.html');
+            
+            // Validate pinned page exists in our data
+            if (pinned) {
+                // Check if pinned is a valid URL or Key in PAGE_DATA
+                const isValid = Object.values(PAGE_DATA).some(p => p.url === pinned);
+                if (isValid) startPage = pinned;
+            }
+            
+            loadPage(startPage);
         }
 
         // --- Page Loader ---
         window.loadPage = function(pageName) {
+            // Normalize path
             if (pageName.startsWith('./')) pageName = pageName.substring(2);
             if (pageName.startsWith('../')) pageName = pageName.substring(3);
             if (pageName.startsWith(BASE_URL)) pageName = pageName.substring(BASE_URL.length);
+
+            // --- STOP & CLEAR PREVIOUS PAGE ---
+            try {
+                const win = appFrame.contentWindow;
+                if (win && win.document) {
+                    // 1. Pause all media elements immediately
+                    const media = win.document.querySelectorAll('audio, video');
+                    media.forEach(m => { 
+                        m.pause(); 
+                        m.src = ""; 
+                        m.load(); 
+                    });
+                    
+                    // 2. Force navigation to about:blank to kill scripts and context
+                    win.location.replace('about:blank');
+                }
+            } catch(e) { console.warn("Cleanup error:", e); }
             
             window.lastLoadedPage = pageName;
             renderNavbar(pageName);
@@ -464,11 +491,14 @@
                     
                     const baseTag = '<base href="' + BASE_URL + '">';
                     
+                    // Inject script to mock user and handle links
+                    // We generate a "Client User" based on the code hash or just generic
                     const patchScript = `
                         <script>
                             window._LOCAL_MODE = true;
                             window._CURRENT_PAGE_NAME = "${pageName}";
                             
+                            // Mock User for Navigation
                             window.currentUser = {
                                 uid: '${currentUser ? currentUser.uid : "client-user"}',
                                 displayName: '${currentUser ? currentUser.username : "Client User"}',
@@ -477,11 +507,13 @@
                                 providerData: []
                             };
 
+                            // Override link clicks to stay in iframe
                             document.addEventListener('click', e => {
                                 const link = e.target.closest('a');
                                 if (link && link.href) {
                                     e.preventDefault();
                                     const href = link.getAttribute('href');
+                                    // Pass back to parent
                                     window.parent.loadPage(href);
                                 }
                             });

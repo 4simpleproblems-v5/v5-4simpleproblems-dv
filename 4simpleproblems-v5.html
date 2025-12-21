@@ -7,9 +7,11 @@
     <!-- Pointing to the GitHub repo for the content. This allows the client to be a single file while loading assets/pages dynamically. -->
     <base href="https://cdn.jsdelivr.net/npm/4sp-dv@latest/logged-in/">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        body { background-color: #040404; color: #c0c0c0; font-family: sans-serif; height: 100vh; margin: 0; display: flex; flex-direction: column; }
+        body { background-color: #040404; color: #c0c0c0; font-family: 'Geist', sans-serif; height: 100vh; margin: 0; display: flex; flex-direction: column; }
         
         #app-frame { width: 100%; height: 100%; border: none; display: none; flex-grow: 1; }
         .hidden { display: none !important; }
@@ -26,6 +28,8 @@
             padding: 0 1rem;
             box-sizing: border-box;
             flex-shrink: 0;
+            z-index: 60; /* Ensure navbar is above settings */
+            position: relative;
         }
         .navbar-logo { height: 40px; width: auto; }
         .tab-wrapper { flex-grow: 1; display: flex; align-items: center; position: relative; min-width: 0; margin: 0 1rem; justify-content: center; overflow: hidden; }
@@ -69,6 +73,114 @@
         .auth-header { padding: 0.5rem; border-bottom: 1px solid #374151; margin-bottom: 0.25rem; }
         .auth-username { color: white; font-weight: bold; font-size: 0.9rem; }
         .auth-email { color: #9ca3af; font-size: 0.75rem; }
+
+        /* --- Settings Page Styles --- */
+        .btn-toolbar-style {
+            background: #00000000;
+            border: 1px solid #333;
+            border-radius: 0.75rem;
+            color: #d1d5db;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-toolbar-style:hover {
+            background-color: #000000;
+            border-color: #fff;
+            color: #ffffff;
+        }
+        .btn-toolbar-style.btn-primary-override {
+            justify-content: center;
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+        .btn-toolbar-style.btn-primary-override:hover {
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+        .btn-toolbar-style.btn-primary-override-danger {
+            justify-content: center;
+            background-color: rgba(220, 38, 38, 0.1);
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        .btn-toolbar-style.btn-primary-override-danger:hover {
+            background-color: rgba(220, 38, 38, 0.15);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .settings-tab {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            color: #9ca3af;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+        .settings-tab:hover {
+            color: #fff;
+            background: #1a1a1a;
+        }
+        .settings-tab.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+        .settings-box { 
+            border: 1px solid #333; 
+            border-radius: 1rem; 
+            background-color: #0d0d0d; 
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .input-text-style {
+            width: 100%; padding: 0.75rem; border: 1px solid #252525; 
+            background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s;
+        }
+        .input-text-style:focus { border-color: #505050; outline: none; }
+        .input-select-style {
+            width: 100%; padding: 0.75rem; border: 1px solid #252525; 
+            background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s;
+        }
+        
+        /* Cropper & Theme Styles */
+        #cropperModal {
+            display: none; position: fixed; z-index: 2050; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; flex-direction: column;
+        }
+        #cropperContent {
+            background-color: #000000; padding: 0; border-radius: 1rem; border: 1px solid #333;
+            display: flex; flex-direction: column; width: 90%; max-width: 600px; overflow: hidden;
+        }
+        #cropperCanvasContainer {
+            position: relative; margin-bottom: 20px; overflow: hidden; max-height: 60vh;
+        }
+        #cropperCanvas { display: block; max-width: 100%; max-height: 60vh; border: 1px dashed rgba(255, 255, 255, 0.3); }
+        
+        .color-palette-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; max-width: 490px; }
+        .color-option { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+        .color-option:hover { transform: scale(1.1); }
+        .color-option.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
+        
+        .letterSquare, .colorSquare {
+            width: 30px; height: 30px; margin: 5px; cursor: pointer; display: flex; justify-content: center;
+            align-items: center; border-radius: 50%; border: 2px solid transparent;
+        }
+        .letterSquare:hover, .colorSquare:hover { transform: scale(1.1); }
+        .letterSquare.selected, .colorSquare.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
+        .letterSquare { background-color: #252525; color: #fff; }
 
     </style>
 </head>
@@ -156,32 +268,34 @@
         </div>
     </div>
 
-    <!-- Settings Overlay -->
-    <div id="settings-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-        <div class="bg-[#0a0a0a] w-full max-w-5xl h-[85vh] rounded-2xl border border-[#252525] flex overflow-hidden shadow-2xl relative">
-            <button id="close-settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white z-10">
-                <i class="fa-solid fa-xmark fa-xl"></i>
+    <!-- Settings Overlay (Full Page Style) -->
+    <div id="settings-overlay" class="fixed bottom-0 left-0 right-0 bg-[#040404] z-50 hidden flex flex-col" style="top: 64px;">
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a] bg-[#000]">
+            <h1 class="text-2xl font-bold text-white pl-4">4SP Settings</h1>
+            <button id="close-settings-btn" class="text-gray-400 hover:text-white pr-4">
+                <i class="fa-solid fa-xmark fa-2x"></i>
             </button>
-            
-            <!-- Sidebar -->
-            <div class="w-64 bg-black border-r border-[#252525] flex flex-col p-4 gap-2 flex-shrink-0">
-                <h2 class="text-xl text-white font-bold mb-6 pl-2">Settings</h2>
-                <button class="settings-tab-btn active text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="general">
-                    <i class="fa-solid fa-gear w-5"></i> General
-                </button>
-                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="personalization">
-                    <i class="fa-solid fa-palette w-5"></i> Personalization
-                </button>
-                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="privacy">
-                    <i class="fa-solid fa-shield-halved w-5"></i> Privacy & Security
-                </button>
-                <button class="settings-tab-btn text-left px-4 py-3 rounded-xl text-gray-300 hover:bg-[#1a1a1a] hover:text-white transition flex items-center gap-3" data-tab="about">
-                    <i class="fa-solid fa-circle-info w-5"></i> About 4SP
-                </button>
-            </div>
+        </header>
 
-            <!-- Content Area -->
-            <div class="flex-grow p-8 overflow-y-auto bg-[#0a0a0a]" id="settings-content">
+        <div class="flex flex-grow overflow-hidden">
+            <!-- Sidebar -->
+            <nav class="w-64 border-r border-[#1a1a1a] bg-[#000] p-4 flex flex-col gap-2 overflow-y-auto">
+                <button class="settings-tab active" data-tab="general">
+                    <i class="fa-solid fa-gear w-5"></i> <span>General</span>
+                </button>
+                <button class="settings-tab" data-tab="personalization">
+                    <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
+                </button>
+                <button class="settings-tab" data-tab="privacy">
+                    <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
+                </button>
+                <button class="settings-tab" data-tab="about">
+                    <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
+                </button>
+            </nav>
+
+            <!-- Main Content -->
+            <div id="settings-content" class="flex-grow p-8 overflow-y-auto bg-[#0d0d0d]">
                 <!-- General Tab -->
                 <div id="tab-general" class="settings-section">
                     <h3 class="text-2xl text-white font-bold mb-6">General Settings</h3>
@@ -284,12 +398,32 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
-
-    <iframe id="app-frame"></iframe>
+    
+    <!-- Cropper Modal -->
+    <div id="cropperModal">
+        <div id="cropperContent">
+            <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
+                <h3 class="text-2xl font-bold text-white">Adjust Profile Picture</h3>
+                <button id="cancelCropBtn" class="text-gray-400 hover:text-white">
+                     <i class="fa-solid fa-xmark fa-xl"></i>
+                </button>
+            </div>
+            <div class="flex flex-col items-center p-6 bg-[#0a0a0a]">
+                <p class="text-sm text-gray-400 mb-4">Drag to move. Scroll to resize.</p>
+                <div id="cropperCanvasContainer" class="relative mb-6 border border-[#333] rounded-lg overflow-hidden w-full flex justify-center bg-black">
+                    <canvas id="cropperCanvas"></canvas>
+                </div>
+                <div class="flex justify-end w-full">
+                    <button id="submitCropBtn" class="btn-toolbar-style btn-primary-override px-6 py-2 rounded-xl">
+                        <i class="fa-solid fa-check mr-2"></i> Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -357,7 +491,13 @@
 
         // --- Navbar Logic ---
         function renderNavbar(activePageUrl) {
-            tabsContainer.innerHTML = '';
+            const tabsContainerEl = document.getElementById('tabs-container');
+            const pinBtnEl = document.getElementById('pin-btn');
+            const pinWrapperEl = document.getElementById('pin-wrapper');
+            const showPinMenuItemEl = document.getElementById('show-pin-menu-item');
+
+            if (!tabsContainerEl) return;
+            tabsContainerEl.innerHTML = '';
             
             let currentPath = activePageUrl.replace(BASE_URL, '');
             
@@ -367,29 +507,33 @@
                 tab.className = `nav-tab ${isAuth ? 'active' : ''}`;
                 tab.innerHTML = `<i class="${page.icon}"></i> ${page.name}`;
                 tab.onclick = () => loadPage(page.url);
-                tabsContainer.appendChild(tab);
+                tabsContainerEl.appendChild(tab);
             });
 
             // Update Pin Button State
             const pinned = localStorage.getItem(PINNED_PAGE_KEY);
-            if (pinned && pinned === currentPath) {
-                pinBtn.style.color = '#4f46e5';
-            } else {
-                pinBtn.style.color = '#d1d5db';
+            if (pinBtnEl) {
+                if (pinned && pinned === currentPath) {
+                    pinBtnEl.style.color = '#4f46e5';
+                } else {
+                    pinBtnEl.style.color = '#d1d5db';
+                }
             }
 
             // Update Pin Visibility
             const isHidden = localStorage.getItem(PIN_HIDDEN_KEY) === 'true';
             if (isHidden) {
-                pinWrapper.classList.add('hidden');
-                showPinMenuItem.classList.remove('hidden');
-                showPinMenuItem.onclick = () => {
-                    localStorage.setItem(PIN_HIDDEN_KEY, 'false');
-                    renderNavbar(activePageUrl);
-                };
+                if (pinWrapperEl) pinWrapperEl.classList.add('hidden');
+                if (showPinMenuItemEl) {
+                    showPinMenuItemEl.classList.remove('hidden');
+                    showPinMenuItemEl.onclick = () => {
+                        localStorage.setItem(PIN_HIDDEN_KEY, 'false');
+                        renderNavbar(activePageUrl);
+                    };
+                }
             } else {
-                pinWrapper.classList.remove('hidden');
-                showPinMenuItem.classList.add('hidden');
+                if (pinWrapperEl) pinWrapperEl.classList.remove('hidden');
+                if (showPinMenuItemEl) showPinMenuItemEl.classList.add('hidden');
             }
         }
 
@@ -401,64 +545,77 @@
             return pageName;
         }
 
-        pinBtn.addEventListener('click', () => {
-            const pageName = getCurrentPage();
-            const currentPinned = localStorage.getItem(PINNED_PAGE_KEY);
-            
-            if (currentPinned === pageName) {
+        // Pin Button
+        if (pinBtn) {
+            pinBtn.addEventListener('click', () => {
+                const pageName = getCurrentPage();
+                const currentPinned = localStorage.getItem(PINNED_PAGE_KEY);
+                
+                if (currentPinned === pageName) {
+                    localStorage.removeItem(PINNED_PAGE_KEY);
+                } else {
+                    localStorage.setItem(PINNED_PAGE_KEY, pageName);
+                }
+                renderNavbar(pageName);
+            });
+
+            // Context Menu
+            pinBtn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (pinMenu) pinMenu.classList.toggle('open');
+                if (authMenu) authMenu.classList.remove('open');
+            });
+        }
+
+        if (repinBtn) {
+            repinBtn.addEventListener('click', () => {
+                localStorage.setItem(PINNED_PAGE_KEY, getCurrentPage());
+                renderNavbar(getCurrentPage());
+                if (pinMenu) pinMenu.classList.remove('open');
+            });
+        }
+
+        if (removePinBtn) {
+            removePinBtn.addEventListener('click', () => {
                 localStorage.removeItem(PINNED_PAGE_KEY);
-            } else {
-                localStorage.setItem(PINNED_PAGE_KEY, pageName);
-            }
-            renderNavbar(pageName);
-        });
+                renderNavbar(getCurrentPage());
+                if (pinMenu) pinMenu.classList.remove('open');
+            });
+        }
 
-        // Context Menu
-        pinBtn.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            pinMenu.classList.toggle('open');
-            authMenu.classList.remove('open');
-        });
-
-        repinBtn.addEventListener('click', () => {
-            localStorage.setItem(PINNED_PAGE_KEY, getCurrentPage());
-            renderNavbar(getCurrentPage());
-            pinMenu.classList.remove('open');
-        });
-
-        removePinBtn.addEventListener('click', () => {
-            localStorage.removeItem(PINNED_PAGE_KEY);
-            renderNavbar(getCurrentPage());
-            pinMenu.classList.remove('open');
-        });
-
-        hidePinBtn.addEventListener('click', () => {
-            localStorage.setItem(PIN_HIDDEN_KEY, 'true');
-            renderNavbar(getCurrentPage());
-            pinMenu.classList.remove('open');
-        });
+        if (hidePinBtn) {
+            hidePinBtn.addEventListener('click', () => {
+                localStorage.setItem(PIN_HIDDEN_KEY, 'true');
+                renderNavbar(getCurrentPage());
+                if (pinMenu) pinMenu.classList.remove('open');
+            });
+        }
 
         // Auth Menu
-        authBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            authMenu.classList.toggle('open');
-            pinMenu.classList.remove('open');
-        });
+        if (authBtn) {
+            authBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (authMenu) authMenu.classList.toggle('open');
+                if (pinMenu) pinMenu.classList.remove('open');
+            });
+        }
 
         document.addEventListener('click', (e) => {
-            if (!authMenu.contains(e.target) && !authBtn.contains(e.target)) {
+            if (authMenu && authBtn && !authMenu.contains(e.target) && !authBtn.contains(e.target)) {
                 authMenu.classList.remove('open');
             }
-            if (!pinMenu.contains(e.target) && !pinBtn.contains(e.target)) {
+            if (pinMenu && pinBtn && !pinMenu.contains(e.target) && !pinBtn.contains(e.target)) {
                 pinMenu.classList.remove('open');
             }
         });
 
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(USER_DATA_KEY);
-            location.reload();
-        });
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(USER_DATA_KEY);
+                location.reload();
+            });
+        }
 
         async function fetchUserData(ownerUid) {
             try {
@@ -588,9 +745,13 @@
         });
 
         function launchApp() {
-            lockScreen.classList.add('hidden');
-            navbar.style.display = 'flex'; // Show navbar
-            appFrame.style.display = 'block';
+            const lockScreenEl = document.getElementById('lock-screen');
+            const navbarEl = document.getElementById('navbar-container');
+            const appFrameEl = document.getElementById('app-frame');
+
+            if (lockScreenEl) lockScreenEl.classList.add('hidden');
+            if (navbarEl) navbarEl.style.display = 'flex';
+            if (appFrameEl) appFrameEl.style.display = 'block';
             
             // Determine start page
             let startPage = 'dashboard.html';
@@ -613,6 +774,10 @@
                 openSettings();
                 return;
             }
+            
+            // Close Settings if open
+            const settingsOverlay = document.getElementById('settings-overlay');
+            if (settingsOverlay) settingsOverlay.classList.add('hidden');
 
             // Normalize path
             if (pageName.startsWith('./')) pageName = pageName.substring(2);
@@ -629,13 +794,27 @@
                 .then(html => {
                     // --- ROBUST CLEANUP: Replace Iframe Element ---
                     // This stops all audio/video and clears context immediately
-                    const oldFrame = appFrame;
+                    const oldFrame = document.getElementById('app-frame'); // Re-query directly
                     const newFrame = document.createElement('iframe');
                     newFrame.id = 'app-frame';
-                    newFrame.style.cssText = oldFrame.style.cssText; // Copy styles (display: block etc)
                     
-                    oldFrame.parentNode.replaceChild(newFrame, oldFrame);
-                    appFrame = newFrame; // Update global reference
+                    if (oldFrame) {
+                        newFrame.style.cssText = oldFrame.style.cssText; // Copy styles
+                        if (oldFrame.parentNode) {
+                            oldFrame.parentNode.replaceChild(newFrame, oldFrame);
+                        }
+                    } else {
+                        // Fallback: This is critical if oldFrame was missing
+                        newFrame.style.width = '100%';
+                        newFrame.style.height = '100%';
+                        newFrame.style.border = 'none';
+                        newFrame.style.display = 'block';
+                        newFrame.style.flexGrow = '1';
+                        document.body.appendChild(newFrame);
+                    }
+                    
+                    // Update global reference if needed, though we should prefer re-querying
+                    appFrame = newFrame; 
 
                     const doc = newFrame.contentWindow.document;
                     doc.open();
@@ -691,7 +870,7 @@
         // --- Settings Logic ---
         const settingsOverlay = document.getElementById('settings-overlay');
         const closeSettingsBtn = document.getElementById('close-settings-btn');
-        const settingsTabs = document.querySelectorAll('.settings-tab-btn');
+        const settingsTabs = document.querySelectorAll('.settings-tab');
         const settingsSections = document.querySelectorAll('.settings-section');
         
         window.openSettings = function() {
@@ -814,6 +993,7 @@
         
         // Render Color Grid
         const gridContainer = pfpLetterOptions.querySelector('.grid');
+        gridContainer.innerHTML = ''; // Clear prev to avoid dups on re-run
         letterColors.forEach(color => {
             const div = document.createElement('div');
             div.className = 'w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition border-2 border-transparent';
@@ -855,67 +1035,201 @@
             }
         });
 
-        // Upload Logic
+        // --- CROPPER LOGIC ---
         const pfpUploadInput = document.getElementById('pfp-upload-input');
         const saveUploadPfpBtn = document.getElementById('save-upload-pfp-btn');
-        
-        pfpUploadInput.addEventListener('change', e => {
+        const cropperModal = document.getElementById('cropperModal');
+        const cropperCanvas = document.getElementById('cropperCanvas');
+        const cancelCropBtn = document.getElementById('cancelCropBtn');
+        const submitCropBtn = document.getElementById('submitCropBtn');
+        const ctx = cropperCanvas.getContext('2d');
+
+        let cropperImage = null;
+        let cropState = { x: 0, y: 0, radius: 100 };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        pfpUploadInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = evt => {
-                    pfpPreview.innerText = "";
-                    pfpPreview.style.backgroundColor = "transparent";
-                    pfpPreview.style.backgroundImage = `url('${evt.target.result}')`;
-                    pfpPreview.style.backgroundSize = "cover";
-                    pfpPreview.style.backgroundPosition = "center";
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        saveUploadPfpBtn.addEventListener('click', async () => {
-            const file = pfpUploadInput.files[0];
-            if (!file || !currentUser) return;
+            if (!file) return;
             
             if (file.size > 2 * 1024 * 1024) {
-                alert("File too large");
+                alert('File is too large (max 2MB).');
                 return;
             }
-            
-            saveUploadPfpBtn.innerText = "Uploading...";
-            
+
             const reader = new FileReader();
-            reader.onload = async evt => {
-                const base64 = evt.target.result;
-                try {
-                    await updateDoc(doc(db, "users", currentUser.uid), {
-                        pfpType: 'custom',
-                        customPfp: base64
-                    });
-                    currentUser.pfpType = 'custom';
-                    currentUser.customPfp = base64;
-                    localStorage.setItem(USER_DATA_KEY, JSON.stringify(currentUser));
+            reader.onload = (evt) => {
+                cropperImage = new Image();
+                cropperImage.onload = () => {
+                    // Setup canvas with fixed height for consistency
+                    const fixedHeight = 400;
+                    const scale = fixedHeight / cropperImage.height;
+                    cropperCanvas.height = fixedHeight;
+                    cropperCanvas.width = cropperImage.width * scale;
                     
-                    saveUploadPfpBtn.innerText = "Saved!";
-                    setTimeout(() => saveUploadPfpBtn.innerText = "Upload & Set", 2000);
-                } catch(e) {
-                    console.error(e);
-                    saveUploadPfpBtn.innerText = "Error";
-                }
+                    // Initial crop state: center, 1/3 min dim
+                    cropState = {
+                        x: cropperCanvas.width / 2,
+                        y: cropperCanvas.height / 2,
+                        radius: Math.min(cropperCanvas.width, cropperCanvas.height) / 3
+                    };
+                    
+                    cropperModal.style.display = 'flex';
+                    requestAnimationFrame(drawCropper);
+                };
+                cropperImage.src = evt.target.result;
             };
             reader.readAsDataURL(file);
         });
 
+        const drawCropper = () => {
+            if (!cropperImage) return;
+            const w = cropperCanvas.width;
+            const h = cropperCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+            
+            // Draw image filling canvas
+            ctx.drawImage(cropperImage, 0, 0, w, h);
+            
+            // Draw overlay
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.beginPath();
+            ctx.rect(0, 0, w, h);
+            // Cut hole
+            ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
+            ctx.fill();
+            
+            // Draw dashed border
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]); // Dashed pattern
+            ctx.beginPath();
+            ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+        };
+
+        const handleStart = (x, y) => {
+            const dx = x - cropState.x;
+            const dy = y - cropState.y;
+            if (dx*dx + dy*dy < cropState.radius * cropState.radius) {
+                isDragging = true;
+                dragStart = { x, y };
+            }
+        };
+        
+        const handleMove = (x, y) => {
+            if (isDragging) {
+                const dx = x - dragStart.x;
+                const dy = y - dragStart.y;
+                
+                let newX = cropState.x + dx;
+                let newY = cropState.y + dy;
+                
+                const r = cropState.radius;
+                const w = cropperCanvas.width;
+                const h = cropperCanvas.height;
+                
+                newX = Math.max(r, Math.min(newX, w - r));
+                newY = Math.max(r, Math.min(newY, h - r));
+                
+                cropState.x = newX;
+                cropState.y = newY;
+                
+                dragStart = { x, y };
+                requestAnimationFrame(drawCropper);
+            }
+        };
+
+        const handleEnd = () => { isDragging = false; };
+        
+        const handleScroll = (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -5 : 5;
+            let newRadius = cropState.radius + delta;
+            const w = cropperCanvas.width;
+            const h = cropperCanvas.height;
+            const maxPossibleRadius = Math.min(w, h) / 2;
+            newRadius = Math.max(20, Math.min(newRadius, maxPossibleRadius));
+            const minX = newRadius;
+            const maxX = w - newRadius;
+            const minY = newRadius;
+            const maxY = h - newRadius;
+            cropState.x = Math.max(minX, Math.min(cropState.x, maxX));
+            cropState.y = Math.max(minY, Math.min(cropState.y, maxY));
+            cropState.radius = newRadius;
+            requestAnimationFrame(drawCropper);
+        };
+
+        cropperCanvas.addEventListener('mousedown', e => handleStart(e.offsetX, e.offsetY));
+        cropperCanvas.addEventListener('mousemove', e => handleMove(e.offsetX, e.offsetY));
+        cropperCanvas.addEventListener('mouseup', handleEnd);
+        cropperCanvas.addEventListener('mouseleave', handleEnd);
+        cropperCanvas.addEventListener('wheel', handleScroll);
+        
+        cancelCropBtn.addEventListener('click', () => {
+            cropperModal.style.display = 'none';
+            pfpUploadInput.value = ''; 
+        });
+
+        submitCropBtn.addEventListener('click', async () => {
+            const tempCanvas = document.createElement('canvas');
+            const size = 128; // Output size
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            const scale = cropperCanvas.height / cropperImage.height;
+            const sourceX = (cropState.x - cropState.radius) / scale;
+            const sourceY = (cropState.y - cropState.radius) / scale;
+            const sourceSize = (cropState.radius * 2) / scale;
+            
+            tCtx.drawImage(cropperImage, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+            const base64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+            
+            // Save to Firestore
+            try {
+                submitCropBtn.disabled = true;
+                submitCropBtn.textContent = "Saving...";
+                await updateDoc(doc(db, "users", currentUser.uid), { 
+                    customPfp: base64,
+                    pfpType: 'custom'
+                });
+                
+                currentUser.customPfp = base64;
+                currentUser.pfpType = 'custom';
+                localStorage.setItem(USER_DATA_KEY, JSON.stringify(currentUser));
+                
+                // Update UI
+                pfpPreview.innerText = "";
+                pfpPreview.style.backgroundImage = `url('${base64}')`;
+                pfpPreview.style.backgroundColor = "transparent";
+                pfpPreview.style.backgroundSize = "cover";
+                
+                cropperModal.style.display = 'none';
+                saveUploadPfpBtn.innerText = "Saved!"; // Feedback on the main btn too
+            } catch (e) {
+                console.error(e);
+                alert('Failed to save image.');
+            } finally {
+                submitCropBtn.disabled = false;
+                submitCropBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Submit';
+            }
+        });
+        
+        saveUploadPfpBtn.addEventListener('click', () => {
+             // Just triggers the file input again if clicked after logic
+             pfpUploadInput.click();
+        });
+
+
         // Theme Logic
         const themeGrid = document.getElementById('theme-grid');
-        const lightThemeNames = ['Light', 'Lavender', 'Rose Gold', 'Mint', 'Pink']; // Define light theme names
-        // (Assuming you have a way to fetch themes or define them locally. For now, we'll hardcode a few common ones or fetch)
-        // Since we are simplifying, let's just fetch themes.json like the old settings page
         
         async function loadThemes() {
             try {
-                const res = await fetch('logged-in/themes.json'); // Might need adjustment based on path
+                const res = await fetch('https://cdn.jsdelivr.net/npm/4sp-dv@latest/themes.json'); 
                 if (!res.ok) return;
                 const themes = await res.json();
                 
@@ -942,8 +1256,6 @@
                 }
             }
             // Save to local storage for persistence on reload
-            // Note: navigation.js handles loading it, so we just need to save to the key it expects
-            // Check navigation.js for key: 'user-navbar-theme'
             localStorage.setItem('user-navbar-theme', JSON.stringify(theme));
             
             // Also update user doc if logged in

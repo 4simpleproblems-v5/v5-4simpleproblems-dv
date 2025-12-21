@@ -160,7 +160,7 @@
 
         const lockScreen = document.getElementById('lock-screen');
         const navbar = document.getElementById('navbar-container');
-        const appFrame = document.getElementById('app-frame');
+        let appFrame = document.getElementById('app-frame');
         const codeInput = document.getElementById('codeInput');
         const unlockBtn = document.getElementById('unlockBtn');
         const lockMessage = document.getElementById('lockMessage');
@@ -461,23 +461,6 @@
             if (pageName.startsWith('../')) pageName = pageName.substring(3);
             if (pageName.startsWith(BASE_URL)) pageName = pageName.substring(BASE_URL.length);
 
-            // --- STOP & CLEAR PREVIOUS PAGE ---
-            try {
-                const win = appFrame.contentWindow;
-                if (win && win.document) {
-                    // 1. Pause all media elements immediately
-                    const media = win.document.querySelectorAll('audio, video');
-                    media.forEach(m => { 
-                        m.pause(); 
-                        m.src = ""; 
-                        m.load(); 
-                    });
-                    
-                    // 2. Force navigation to about:blank to kill scripts and context
-                    win.location.replace('about:blank');
-                }
-            } catch(e) { console.warn("Cleanup error:", e); }
-            
             window.lastLoadedPage = pageName;
             renderNavbar(pageName);
 
@@ -486,19 +469,26 @@
             fetch(url)
                 .then(res => res.text())
                 .then(html => {
-                    const doc = appFrame.contentWindow.document;
+                    // --- ROBUST CLEANUP: Replace Iframe Element ---
+                    // This stops all audio/video and clears context immediately
+                    const oldFrame = appFrame;
+                    const newFrame = document.createElement('iframe');
+                    newFrame.id = 'app-frame';
+                    newFrame.style.cssText = oldFrame.style.cssText; // Copy styles (display: block etc)
+                    
+                    oldFrame.parentNode.replaceChild(newFrame, oldFrame);
+                    appFrame = newFrame; // Update global reference
+
+                    const doc = newFrame.contentWindow.document;
                     doc.open();
                     
                     const baseTag = '<base href="' + BASE_URL + '">';
                     
-                    // Inject script to mock user and handle links
-                    // We generate a "Client User" based on the code hash or just generic
                     const patchScript = `
                         <script>
                             window._LOCAL_MODE = true;
                             window._CURRENT_PAGE_NAME = "${pageName}";
                             
-                            // Mock User for Navigation
                             window.currentUser = {
                                 uid: '${currentUser ? currentUser.uid : "client-user"}',
                                 displayName: '${currentUser ? currentUser.username : "Client User"}',
@@ -507,13 +497,11 @@
                                 providerData: []
                             };
 
-                            // Override link clicks to stay in iframe
                             document.addEventListener('click', e => {
                                 const link = e.target.closest('a');
                                 if (link && link.href) {
                                     e.preventDefault();
                                     const href = link.getAttribute('href');
-                                    // Pass back to parent
                                     window.parent.loadPage(href);
                                 }
                             });

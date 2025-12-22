@@ -315,17 +315,29 @@
             white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
         }
         
-        /* DV Tag Style */
-        .dv-tag {
-            background-color: rgba(79, 70, 229, 0.9); /* Indigo base */
-            color: white;
+        /* --- ORIGIN TAGS STYLES --- */
+        .origin-tag {
             font-size: 0.65rem;
             font-weight: 700;
             padding: 0.1rem 0.3rem;
-            border-radius: 0.25rem;
-            border: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            border-radius: 0.35rem;
             letter-spacing: 0.05em;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Matches btn-primary-override: Bright purple outline, dark purple bg */
+        .tag-dv {
+            background-color: rgba(79, 70, 229, 0.2); 
+            border: 1px solid #4f46e5;
+            color: #4f46e5;
+        }
+
+        /* Cyan/Aqua style for WEB */
+        .tag-web {
+            background-color: rgba(6, 182, 212, 0.2);
+            border: 1px solid #06b6d4;
+            color: #22d3ee;
         }
         
     </style>
@@ -784,10 +796,12 @@
                 const isHearted = hearts.includes(currentUser.uid);
                 const isOwner = data.creatorUid === currentUser.uid;
 
-                // --- DV TAG LOGIC FOR MODAL ---
+                // --- DV/WEB TAG LOGIC FOR MODAL ---
                 let originTag = '';
                 if(data.origin === 'DV') {
-                    originTag = `<span class="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/20 shadow-md ml-2 align-middle">DV</span>`;
+                    originTag = `<span class="origin-tag tag-dv ml-2 align-middle">DV</span>`;
+                } else {
+                    originTag = `<span class="origin-tag tag-web ml-2 align-middle">WEB</span>`;
                 }
 
                 container.innerHTML = `
@@ -1103,10 +1117,12 @@
                 const el = document.createElement('div');
                 el.className = 'photo-thumbnail';
                 
-                // --- RENDER VISUAL DV TAG ---
-                let dvTagHtml = '';
+                // --- RENDER VISUAL DV/WEB TAG ---
+                let originTagHtml = '';
                 if(data.origin === 'DV') {
-                    dvTagHtml = `<span class="absolute bottom-2 right-2 z-20 dv-tag">DV</span>`;
+                    originTagHtml = `<span class="absolute bottom-2 right-2 z-20 origin-tag tag-dv">DV</span>`;
+                } else {
+                    originTagHtml = `<span class="absolute bottom-2 right-2 z-20 origin-tag tag-web">WEB</span>`;
                 }
 
                 el.innerHTML = `
@@ -1116,7 +1132,7 @@
                         <span class="text-white text-xs bg-black/50 px-2 py-1 rounded-lg backdrop-blur-sm" title="Likes"><i class="fas fa-heart text-red-400"></i> ${formatCount(data.heartCount)}</span>
                         <span class="text-white text-xs bg-black/50 px-2 py-1 rounded-lg backdrop-blur-sm" title="Comments"><i class="fas fa-comment text-indigo-400"></i> ${formatCount(data.commentCount)}</span>
                     </div>
-                    ${dvTagHtml}
+                    ${originTagHtml}
                     <div class="title-overlay">${data.title}</div>
                 `;
                 el.onclick = () => window.openPhotoModal(data.id);

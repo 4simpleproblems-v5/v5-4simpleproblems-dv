@@ -10,7 +10,16 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        body { background-color: #040404; color: #c0c0c0; font-family: 'Geist', sans-serif; height: 100vh; margin: 0; display: flex; flex-direction: column; }
+        body { 
+            background-color: #040404; 
+            color: #c0c0c0; 
+            font-family: 'Geist', sans-serif; 
+            height: 100vh; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            font-weight: 300;
+        }
         
         h1, h2, h3, .font-bold, .font-semibold, strong, b, .tracking-widest {
             font-weight: 400 !important;
@@ -104,13 +113,52 @@
         .auth-email { color: var(--menu-email-text, #9ca3af); font-size: 0.75rem; }
 
         /* --- Settings Page Styles --- */
+        #settings-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            top: 64px; /* Below navbar */
+            background: #040404;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #settings-container {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+            overflow: hidden; /* Contain scroll */
+        }
+
+        #settings-sidebar {
+            width: 250px;
+            padding-right: 20px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        #settings-main-view {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #0d0d0d;
+            border: 1px solid #1a1a1a;
+            border-radius: 0.75rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
         .btn-toolbar-style {
-            background: #00000000;
+            background: #000000;
             border: 1px solid #333;
             border-radius: 0.75rem;
             color: #d1d5db;
             padding: 0.5rem 1rem;
-            font-weight: 400;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
@@ -122,6 +170,7 @@
             border-color: #fff;
             color: #ffffff;
         }
+        
         .btn-toolbar-style.btn-primary-override {
             justify-content: center;
             background-color: rgba(79, 70, 229, 0.1);
@@ -133,56 +182,66 @@
             border-color: #6366f1;
             color: #6366f1;
         }
-        .btn-toolbar-style.btn-primary-override-danger {
-            justify-content: center;
-            background-color: rgba(220, 38, 38, 0.1);
-            border: 1px solid #dc2626;
-            color: #dc2626;
-        }
-        .btn-toolbar-style.btn-primary-override-danger:hover {
-            background-color: rgba(220, 38, 38, 0.15);
-            border-color: #ef4444;
-            color: #ef4444;
-        }
+
         .settings-tab {
             width: 100%;
             justify-content: flex-start;
-            padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            color: #9ca3af;
-            background: transparent;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.95rem;
-        }
-        .settings-tab:hover {
-            color: #fff;
-            background: #1a1a1a;
         }
         .settings-tab.active {
             background-color: rgba(79, 70, 229, 0.1);
             border: 1px solid #4f46e5;
             color: #4f46e5;
         }
+        .settings-tab.active:hover {
+            background-color: rgba(79, 70, 229, 0.15);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+
         .settings-box { 
             border: 1px solid #333; 
             border-radius: 1rem; 
-            background-color: #0d0d0d; 
+            background-color: #000000; 
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-        .input-text-style {
+        
+        .input-text-style, .input-select-style {
             width: 100%; padding: 0.75rem; border: 1px solid #252525; 
             background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s;
         }
-        .input-text-style:focus { border-color: #505050; outline: none; }
-        .input-select-style {
-            width: 100%; padding: 0.75rem; border: 1px solid #252525; 
-            background-color: #111111; border-radius: 0.5rem; color: #c0c0c0; transition: all 0.2s;
+        .input-text-style:focus, .input-select-style:focus { 
+            border-color: #505050; outline: none; box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
         }
+
+        /* --- Input Key Style (Panic Key) --- */
+        .input-key-style {
+            width: 4rem; /* Fixed width for a single key */
+            padding: 0.75rem;
+            border: 1px solid #252525; 
+            background-color: #111111; 
+            border-radius: 0.5rem; 
+            color: #c0c0c0; 
+            transition: all 0.2s;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: 500;
+            text-transform: uppercase;
+            caret-color: transparent;
+        }
+        .input-key-style:focus {
+            border-color: #505050; 
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+        }
+        .input-key-style::placeholder {
+            font-size: 1rem;
+            text-transform: none;
+        }
+        .general-message-area { min-height: 20px; margin-top: 1rem; font-weight: 400; }
+        .success-message { color: #4ade80; }
+        .error-message { color: #f87171; }
+        .warning-message { color: #fbbf24; }
         
         /* --- Theme Picker Styles --- */
         #theme-picker-container {
@@ -209,14 +268,14 @@
         }
         .theme-button.active {
             opacity: 1;
-            box-shadow: 0 0 10px var(--tab-active-shadow, rgba(79, 70, 229, 0.3));
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
         }
         .theme-button-name {
-            font-weight: 400;
+            font-weight: 500;
             color: #e0e0e0;
         }
 
-        /* Cropper & Theme Styles */
+        /* Cropper Styles */
         #cropperModal {
             display: none; position: fixed; z-index: 2050; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; flex-direction: column;
@@ -229,19 +288,6 @@
             position: relative; margin-bottom: 20px; overflow: hidden; max-height: 60vh;
         }
         #cropperCanvas { display: block; max-width: 100%; max-height: 60vh; border: 1px dashed rgba(255, 255, 255, 0.3); }
-        
-        .color-palette-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; max-width: 490px; }
-        .color-option { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
-        .color-option:hover { transform: scale(1.1); }
-        .color-option.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
-        
-        .letterSquare, .colorSquare {
-            width: 30px; height: 30px; margin: 5px; cursor: pointer; display: flex; justify-content: center;
-            align-items: center; border-radius: 50%; border: 2px solid transparent;
-        }
-        .letterSquare:hover, .colorSquare:hover { transform: scale(1.1); }
-        .letterSquare.selected, .colorSquare.selected { border-color: white; box-shadow: 0 0 0 2px #4f46e5; }
-        .letterSquare { background-color: #252525; color: #fff; }
 
     </style>
 </head>
@@ -324,109 +370,127 @@
         </div>
     </div>
 
-    <div id="settings-overlay" class="fixed bottom-0 left-0 right-0 bg-[#040404] z-50 hidden flex flex-col" style="top: 64px;">
-        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a] bg-[#000]">
-            <h1 class="text-2xl font-bold text-white pl-4">4SP Settings</h1>
-            <button id="close-settings-btn" class="text-gray-400 hover:text-white pr-4">
-                <i class="fa-solid fa-xmark fa-2x"></i>
-            </button>
+    <div id="settings-overlay" class="hidden">
+        <header class="flex justify-between items-center p-4 border-b border-[#1a1a1a]">
+            <h1 class="text-2xl font-bold text-white">4SP Settings</h1>
         </header>
 
-        <div class="flex flex-grow overflow-hidden">
-            <nav class="w-64 border-r border-[#1a1a1a] bg-[#000] p-4 flex flex-col gap-2 overflow-y-auto">
-                <button class="settings-tab active" data-tab="general">
+        <div id="settings-container">
+            <nav id="settings-sidebar">
+                <button class="btn-toolbar-style settings-tab active" data-tab="general">
                     <i class="fa-solid fa-gear w-5"></i> <span>General</span>
                 </button>
-                <button class="settings-tab" data-tab="personalization">
+                <button class="btn-toolbar-style settings-tab" data-tab="personalization">
                     <i class="fa-solid fa-palette w-5"></i> <span>Personalization</span>
                 </button>
-                <button class="settings-tab" data-tab="privacy">
+                <button class="btn-toolbar-style settings-tab" data-tab="privacy">
                     <i class="fa-solid fa-shield-halved w-5"></i> <span>Privacy & Security</span>
                 </button>
-                <button class="settings-tab" data-tab="about">
+                <button class="btn-toolbar-style settings-tab" data-tab="about">
                     <i class="fa-solid fa-circle-info w-5"></i> <span>About 4SP</span>
                 </button>
             </nav>
 
-            <div id="settings-content" class="flex-grow p-8 overflow-y-auto bg-[#0d0d0d]">
+            <div id="settings-main-view">
                 <div id="tab-general" class="settings-section">
-                    <h3 class="text-2xl text-white font-bold mb-6">General Settings</h3>
-                    <div class="mb-6">
-                        <label class="block text-gray-400 text-sm mb-2">Username</label>
+                    <h3 class="text-3xl font-bold text-white mb-6">General Settings</h3>
+                    <div class="settings-box">
+                        <h3 class="text-xl font-bold text-white mb-2">Account Username</h3>
+                        <label class="block text-gray-400 text-sm mb-2 font-light">New Username</label>
                         <div class="flex gap-2">
-                            <input type="text" id="settings-username-input" class="bg-[#111] border border-[#333] text-white rounded-lg px-4 py-2 w-full max-w-md focus:border-indigo-500 outline-none transition" placeholder="New Username">
-                            <button id="save-username-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition">Save</button>
+                            <input type="text" id="settings-username-input" class="input-text-style" placeholder="Enter username">
+                            <button id="save-username-btn" class="btn-toolbar-style btn-primary-override">Save</button>
                         </div>
-                        <p id="username-msg" class="text-sm mt-2 min-h-[20px]"></p>
+                        <p id="username-msg" class="general-message-area text-sm mt-2"></p>
                     </div>
                 </div>
 
                 <div id="tab-personalization" class="settings-section hidden">
-                    <h3 class="text-2xl text-white font-bold mb-6">Personalization</h3>
+                    <h3 class="text-3xl font-bold text-white mb-6">Personalization</h3>
                     
-                    <div class="mb-8 p-6 bg-[#111] rounded-xl border border-[#252525]">
-                        <h4 class="text-lg text-white font-semibold mb-4">Profile Picture</h4>
+                    <h3 class="text-xl font-bold text-white mb-2">Profile Picture</h3>
+                    <div class="settings-box mb-8 p-4">
                         <div class="flex items-start gap-6">
                             <div class="flex flex-col items-center gap-2">
                                 <div id="pfp-preview" class="w-24 h-24 rounded-full bg-gray-700 overflow-hidden border-2 border-[#333] flex items-center justify-center text-3xl font-bold text-white relative">
-                                    </div>
+                                </div>
                                 <p class="text-xs text-gray-500">Preview</p>
                             </div>
                             
                             <div class="flex-grow">
                                 <div class="flex gap-4 mb-4 border-b border-[#333] pb-4">
-                                    <button class="pfp-mode-btn active px-3 py-1 rounded-lg text-sm text-gray-300 hover:bg-[#222] transition" data-mode="letter">Letter Avatar</button>
-                                    <button class="pfp-mode-btn px-3 py-1 rounded-lg text-sm text-gray-300 hover:bg-[#222] transition" data-mode="upload">Upload Image</button>
+                                    <button class="pfp-mode-btn active btn-toolbar-style" data-mode="letter">Letter Avatar</button>
+                                    <button class="pfp-mode-btn btn-toolbar-style" data-mode="upload">Upload Image</button>
                                 </div>
 
                                 <div id="pfp-letter-options" class="block">
                                     <div class="grid grid-cols-6 gap-2 mb-4 max-w-xs">
                                         </div>
-                                    <button id="save-letter-pfp-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">Set Letter Avatar</button>
+                                    <button id="save-letter-pfp-btn" class="btn-toolbar-style btn-primary-override">Set Letter Avatar</button>
                                 </div>
 
                                 <div id="pfp-upload-options" class="hidden">
                                     <input type="file" id="pfp-upload-input" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#222] file:text-white hover:file:bg-[#333] mb-4"/>
                                     <p class="text-xs text-gray-500 mb-4">Max size 2MB. Square images work best.</p>
-                                    <button id="save-upload-pfp-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition">Upload & Set</button>
+                                    <button id="save-upload-pfp-btn" class="btn-toolbar-style btn-primary-override">Upload & Set</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525]">
-                        <h4 class="text-lg text-white font-semibold mb-4">Theme</h4>
+                    <h3 class="text-xl font-bold text-white mb-2">Navigation Bar Theme</h3>
+                    <div class="settings-box p-4">
                         <div id="theme-picker-container">
-                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div id="tab-privacy" class="settings-section hidden">
-                    <h3 class="text-2xl text-white font-bold mb-6">Privacy & Security</h3>
+                    <h3 class="text-3xl font-bold text-white mb-6">Privacy & Security</h3>
                     
-                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525]">
-                        <h4 class="text-lg text-white font-semibold mb-2">Panic Key</h4>
-                        <p class="text-sm text-gray-400 mb-4">Pressing this key will immediately redirect you to Google.</p>
+                    <h3 class="text-xl font-bold text-white mb-2">Panic Key Settings</h3>
+                    <div class="settings-box p-4">
+                        <p class="text-sm font-light text-gray-400 mb-4">
+                            Configure up to 3 panic keys. Pressing the specified key (without Shift, Ctrl, or Alt) on any page will redirect you to the URL you set.
+                            <br>
+                            <span class="text-yellow-400">Valid keys:</span> a-z, 0-9, and &#96; - = [ ] \ ; ' , . /
+                        </p>
                         
-                        <div class="flex items-center gap-4">
-                            <div class="relative">
-                                <input type="text" id="panic-key-input" maxlength="1" class="w-16 h-16 bg-[#0a0a0a] border border-[#333] rounded-xl text-center text-2xl text-white focus:border-red-500 outline-none uppercase font-mono transition" placeholder="-">
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-gray-300">Current Key: <span id="current-panic-key" class="text-red-400 font-mono font-bold">NONE</span></span>
-                                <button id="save-panic-key-btn" class="text-xs text-blue-400 hover:text-blue-300 mt-1 text-left">Save Key</button>
-                                <button id="clear-panic-key-btn" class="text-xs text-gray-500 hover:text-gray-400 mt-1 text-left">Clear Key</button>
-                            </div>
+                        <div class="flex items-center gap-4 px-2 mb-2">
+                            <label class="block text-gray-400 text-sm font-light" style="width: 4rem; text-align: center;">Key</label>
+                            <label class="block text-gray-400 text-sm font-light flex-grow">Redirect URL</label>
+                        </div>
+
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey1" data-key-id="1" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl1" class="input-text-style" placeholder="e.g., https://google.com">
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey2" data-key-id="2" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl2" class="input-text-style" placeholder="e.g., https://youtube.com/feed/subscriptions">
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-3">
+                            <input type="text" id="panicKey3" data-key-id="3" class="input-key-style panic-key-input" placeholder="-" maxlength="1">
+                            <input type="url" id="panicUrl3" class="input-text-style" placeholder="e.g., https://wikipedia.org">
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 border-t border-[#252525]">
+                            <p id="panicKeyMessage" class="general-message-area text-sm"></p>
+                            <button id="applyPanicKeyBtn" class="btn-toolbar-style btn-primary-override w-36" style="padding: 0.5rem 0.75rem;">
+                                <i class="fa-solid fa-check mr-1"></i> Apply Keys
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <div id="tab-about" class="settings-section hidden">
-                    <h3 class="text-2xl text-white font-bold mb-6">About 4SP</h3>
-                    <div class="p-6 bg-[#111] rounded-xl border border-[#252525] flex flex-col items-center text-center">
+                    <h3 class="text-3xl font-bold text-white mb-6">About 4SP</h3>
+                    <div class="settings-box p-6 flex flex-col items-center text-center">
                         <img src="https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png" class="h-24 mb-4" alt="Logo">
                         <h1 class="text-3xl font-bold text-white mb-2">4SimpleProblems</h1>
-                        <p class="text-gray-400 mb-6 max-w-lg">A comprehensive student toolkit and entertainment platform.</p>
+                        <p class="text-gray-400 mb-6 max-w-lg font-light">A comprehensive student toolkit and entertainment platform.</p>
                         
                         <div class="inline-block bg-[#0a0a0a] border border-[#333] px-4 py-2 rounded-full mb-8">
                             <span class="text-gray-500 text-sm">Version</span>
@@ -448,7 +512,7 @@
         <div id="cropperContent">
             <div class="flex justify-between items-center p-6 border-b border-[#333] bg-black">
                 <h3 class="text-2xl font-bold text-white">Adjust Profile Picture</h3>
-                <button id="cancelCropBtn" class="text-gray-400 hover:text-white">
+                <button id="cancelCropBtn" class="btn-toolbar-style w-10 h-10 flex items-center justify-center p-0 rounded-xl">
                      <i class="fa-solid fa-xmark fa-xl"></i>
                 </button>
             </div>
@@ -780,13 +844,6 @@
             <div class="games-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4" id="favoritesGameList" style="display: none;"></div>
         </div>
 
-        <div id="top20Section" style="display: none;">
-            <h2 id="top20Header" class="text-center text-3xl font-bold mt-12 mb-6 text-white">
-                <strong>Top 20</strong>
-            </h2>
-            <div class="games-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4" id="top20GameList"></div>
-        </div>
-
         <div id="category-viewer" class="w-full mt-12">
             <div id="category-slider-container" class="relative flex items-center justify-center max-w-sm mx-auto h-12">
                 <button id="prev-category" class="absolute left-0 top-1/2 -translate-y-1/2 text-2xl text-gray-500 hover:text-white transition-all p-2 z-10 disabled:opacity-30 disabled:text-gray-700 disabled:hover:text-gray-700">
@@ -885,8 +942,6 @@
     <script>
         // --- Configuration & Globals ---
         
-        const TOP_GAMES_URL = "https://script.google.com/macros/s/AKfycbx1xYwL2QqkOQHyeCWIVSMVLP_XXts5zpb0M-vbvlRl1MpRYYcv4NI-i8OaGc0YP0wpsg/exec?action=getTop10"; 
-
         const GN_ZONES_URL = "https://cdn.jsdelivr.net/gh/gn-math/assets@main/zones.json";
         const GN_COVER_URL_BASE = "https://cdn.jsdelivr.net/gh/gn-math/covers@main";
         
@@ -919,8 +974,6 @@
 
         const favoritesHeader = document.getElementById("favoritesHeader");
         const favoritesGameList = document.getElementById("favoritesGameList");
-        const top20Section = document.getElementById("top20Section");
-        const top20GameList = document.getElementById("top20GameList");
         const searchInput = document.getElementById("searchInput");
         const searchResults = document.getElementById("searchResults");
         const searchDivider = document.getElementById("searchDivider");
@@ -1078,50 +1131,6 @@
                     btn.title = isFavorited ? 'Remove from Favorites' : 'Add to Favorites';
                 }
             });
-        }
-
-        // --- Top 20 Management ---
-        function normalizeGameName(name) {
-            return name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
-        }
-
-        async function fetchTopGames() {
-            try {
-                const response = await fetch(TOP_GAMES_URL);
-                if (!response.ok) throw new Error("Network error:" + response.statusText);
-                const data = await response.json();
-                if (data && data.content) {
-                    const parsedData = JSON.parse(data.content);
-                    renderTopGames(parsedData);
-                }
-            } catch (e) {
-                console.error(`Error while fetching Top 20 games: ${e}`);
-                top20Section.style.display = 'none';
-            }
-        }
-
-        function renderTopGames(topData) {
-            top20GameList.innerHTML = "";
-            let foundCount = 0;
-            const displayed = new Set();
-            const strongdogGames = allGames.filter(g => g.category === 'StrongdogXP');
-
-            for (let i = 0; i < topData.length && foundCount < 20; i++) {
-                const gameName = topData[i][0];
-                const normalizedName = normalizeGameName(gameName);
-                const matchedGame = strongdogGames.find(g => normalizeGameName(g.name) === normalizedName);
-                if (matchedGame && !displayed.has(normalizedName)) {
-                    const card = createGameCard(matchedGame, true);
-                    top20GameList.appendChild(card);
-                    displayed.add(normalizedName);
-                    foundCount++;
-                }
-            }
-            if (foundCount > 0 && categories[currentCategoryIndex] === 'StrongdogXP') {
-                top20Section.style.display = 'block';
-            } else {
-                top20Section.style.display = 'none';
-            }
         }
 
         // --- URL Helpers (Strongdog) ---
@@ -1451,7 +1460,6 @@
             renderGamesForCurrentCategory();
             updateArrowVisibility();
             updateURL(categories[currentCategoryIndex]);
-            top20Section.style.display = (categories[currentCategoryIndex] === 'StrongdogXP') ? 'block' : 'none';
         }
         
         async function renderGamesForCurrentCategory() {
@@ -1642,7 +1650,6 @@
 
             switchCategory(currentCategoryIndex);
             renderFavorites();
-            await fetchTopGames();
             setupInstructionOverlay();
             
             searchInput.placeholder = `Search all games...`;
@@ -2128,6 +2135,11 @@
                             };
 
                             window.openSettings = function() { window.parent.openSettings(); };
+                            
+                            // Forward keydown to parent for panic key
+                            window.addEventListener('keydown', function(e) {
+                                if(window.parent.handlePanic) window.parent.handlePanic(e);
+                            });
                         <\/script>
                     `;
                     
@@ -2188,6 +2200,11 @@
                             window.openSettings = function() {
                                 window.parent.openSettings();
                             };
+                            
+                            // Forward keydown to parent for panic key
+                            window.addEventListener('keydown', function(e) {
+                                if(window.parent.handlePanic) window.parent.handlePanic(e);
+                            });
 
                             document.addEventListener('click', e => {
                                 const link = e.target.closest('a');
@@ -2219,7 +2236,6 @@
 
         // --- Settings Logic ---
         const settingsOverlay = document.getElementById('settings-overlay');
-        const closeSettingsBtn = document.getElementById('close-settings-btn');
         const settingsTabs = document.querySelectorAll('.settings-tab');
         const settingsSections = document.querySelectorAll('.settings-section');
         
@@ -2227,12 +2243,6 @@
             settingsOverlay.classList.remove('hidden');
             loadSettingsData();
         };
-        
-        function closeSettings() {
-            settingsOverlay.classList.add('hidden');
-        }
-        
-        closeSettingsBtn.addEventListener('click', closeSettings);
         
         // Tab Switching
         settingsTabs.forEach(btn => {
@@ -2698,39 +2708,221 @@
             }
         }
 
-        // --- 3. Privacy: Panic Key ---
-        const panicKeyInput = document.getElementById('panic-key-input');
-        const currentPanicKeyDisplay = document.getElementById('current-panic-key');
-        const savePanicKeyBtn = document.getElementById('save-panic-key-btn');
-        const clearPanicKeyBtn = document.getElementById('clear-panic-key-btn');
+        // --- 3. Privacy: Panic Key Logic ---
         
-        // Load Panic Key
-        const PANIC_KEY_STORAGE = 'local_panic_key';
-        let currentPanicKey = localStorage.getItem(PANIC_KEY_STORAGE);
-        if (currentPanicKey) currentPanicKeyDisplay.innerText = currentPanicKey;
+        const DB_NAME = 'userLocalSettingsDB';
+        const STORE_NAME = 'panicKeyStore';
+
+        // --- IndexedDB Helpers ---
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME);
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
         
-        savePanicKeyBtn.addEventListener('click', () => {
-            const key = panicKeyInput.value.trim().toUpperCase();
-            if (key && key.length === 1) {
-                localStorage.setItem(PANIC_KEY_STORAGE, key);
-                currentPanicKey = key;
-                currentPanicKeyDisplay.innerText = key;
-                panicKeyInput.value = '';
+        async function getPanicKeySettings() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    const settingsMap = new Map(request.result.map(item => [item.id, item]));
+                    db.close();
+                    resolve(settingsMap);
+                };
+                request.onerror = () => {
+                     db.close();
+                    reject(request.error);
+                };
+            });
+        }
+        
+        async function savePanicKeySettings(settingsArray) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                
+                let completed = 0;
+                const total = settingsArray.length;
+
+                settingsArray.forEach(setting => {
+                    const request = store.put(setting);
+                    request.onsuccess = () => {
+                        completed++;
+                        if (completed === total) {
+                            db.close();
+                            resolve();
+                        }
+                    };
+                    request.onerror = () => {
+                         db.close();
+                        reject(request.error); 
+                    };
+                });
+                
+                if (total === 0) {
+                     db.close();
+                    resolve();
+                }
+            });
+        }
+
+        // Global store for active keys (in-memory)
+        window.activePanicKeys = [];
+
+        async function loadPanicKeys() {
+            try {
+                const settingsMap = await getPanicKeySettings();
+                window.activePanicKeys = []; // Reset
+                
+                // Populate UI if settings panel is open (though this runs globally too)
+                const panicKey1 = document.getElementById('panicKey1');
+                const panicUrl1 = document.getElementById('panicUrl1');
+                const panicKey2 = document.getElementById('panicKey2');
+                const panicUrl2 = document.getElementById('panicUrl2');
+                const panicKey3 = document.getElementById('panicKey3');
+                const panicUrl3 = document.getElementById('panicUrl3');
+
+                const key1 = settingsMap.get('panicKey1');
+                const key2 = settingsMap.get('panicKey2');
+                const key3 = settingsMap.get('panicKey3');
+
+                if (key1) {
+                    if (panicKey1) panicKey1.value = key1.key || '';
+                    if (panicUrl1) panicUrl1.value = key1.url || '';
+                    if (key1.key && key1.url) window.activePanicKeys.push(key1);
+                }
+                if (key2) {
+                    if (panicKey2) panicKey2.value = key2.key || '';
+                    if (panicUrl2) panicUrl2.value = key2.url || '';
+                     if (key2.key && key2.url) window.activePanicKeys.push(key2);
+                }
+                if (key3) {
+                    if (panicKey3) panicKey3.value = key3.key || '';
+                    if (panicUrl3) panicUrl3.value = key3.url || '';
+                     if (key3.key && key3.url) window.activePanicKeys.push(key3);
+                }
+            } catch (e) {
+                console.error("Error loading panic keys:", e);
             }
+        }
+
+        // Panic Key UI Logic
+        const applyPanicKeyBtn = document.getElementById('applyPanicKeyBtn');
+        const panicKeyMessage = document.getElementById('panicKeyMessage');
+        const panicKeyInputs = document.querySelectorAll('.panic-key-input');
+
+        // Input Validation
+        const validKeyRegex = /^[a-z0-9`\-=\[\]\\;',\.\/]$/;
+        panicKeyInputs.forEach(input => {
+            input.addEventListener('keydown', e => {
+                if (e.key.length > 1 && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                    e.preventDefault(); return;
+                }
+                const lowerKey = e.key.toLowerCase();
+                if (lowerKey.length === 1 && !validKeyRegex.test(lowerKey)) {
+                     e.preventDefault(); 
+                     if(panicKeyMessage) panicKeyMessage.innerHTML = `<span class="text-yellow-400">Invalid key. Only a-z, 0-9, and \` - = [ ] \\ ; ' , . / are allowed.</span>`;
+                } else if (lowerKey.length === 1) {
+                    e.preventDefault(); input.value = lowerKey; 
+                    if(panicKeyMessage) panicKeyMessage.innerText = ''; 
+                }
+            });
         });
+
+        if (applyPanicKeyBtn) {
+            applyPanicKeyBtn.addEventListener('click', async () => {
+                if(panicKeyMessage) panicKeyMessage.innerText = '';
+                const keys = [
+                    document.getElementById('panicKey1').value,
+                    document.getElementById('panicKey2').value,
+                    document.getElementById('panicKey3').value
+                ];
+                const urls = [
+                    document.getElementById('panicUrl1').value,
+                    document.getElementById('panicUrl2').value,
+                    document.getElementById('panicUrl3').value
+                ];
+                
+                const settingsToSave = [];
+                let hasError = false;
+
+                for (let i = 0; i < 3; i++) {
+                    const key = keys[i];
+                    let url = urls[i]; 
+                    const id = `panicKey${i + 1}`;
+                    
+                    if (!key && !url) { settingsToSave.push({ id, key: '', url: '' }); continue; }
+                    
+                    if ( (key && !url) || (!key && url) ) {
+                        panicKeyMessage.innerHTML = `<span class="text-red-400">Panic Key ${i+1} is incomplete. Both key and URL must be filled, or both empty.</span>`;
+                        hasError = true; break;
+                    }
+
+                    if (url.startsWith('/') || url.startsWith('../') || url.startsWith('./')) {
+                         panicKeyMessage.innerHTML = `<span class="text-red-400">Panic Key ${i+1} must be a full web address (e.g., google.com).</span>`;
+                        hasError = true; break;
+                    }
+
+                    if (!url.startsWith('https://') && !url.startsWith('http://')) { url = 'https://' + url; }
+
+                    try { new URL(url); } catch (e) {
+                         panicKeyMessage.innerHTML = `<span class="text-red-400">Panic Key ${i+1} has an invalid URL.</span>`;
+                        hasError = true; break;
+                    }
+                    settingsToSave.push({ id, key, url }); 
+                }
+
+                if (hasError) return;
+
+                const filledKeys = settingsToSave.map(s => s.key).filter(k => k);
+                if (new Set(filledKeys).size !== filledKeys.length) {
+                     panicKeyMessage.innerHTML = `<span class="text-red-400">Duplicate panic keys found. Keys must be unique.</span>`;
+                    return;
+                }
+                
+                try {
+                    applyPanicKeyBtn.disabled = true;
+                    panicKeyMessage.innerHTML = `<span class="text-yellow-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...</span>`;
+                    await savePanicKeySettings(settingsToSave);
+                    panicKeyMessage.innerHTML = `<span class="text-green-400">Panic key settings saved successfully! Reloading...</span>`;
+                    setTimeout(() => location.reload(), 1000); 
+                } catch (e) {
+                    console.error("Error saving panic key settings:", e);
+                    panicKeyMessage.innerHTML = `<span class="text-red-400">An error occurred while saving.</span>`;
+                } finally {
+                    applyPanicKeyBtn.disabled = false;
+                }
+            });
+        }
         
-        clearPanicKeyBtn.addEventListener('click', () => {
-            localStorage.removeItem(PANIC_KEY_STORAGE);
-            currentPanicKey = null;
-            currentPanicKeyDisplay.innerText = "NONE";
-        });
-        
-        // Global Panic Listener
-        window.addEventListener('keydown', (e) => {
-            if (currentPanicKey && e.key.toUpperCase() === currentPanicKey && !e.ctrlKey && !e.altKey && !e.metaKey && e.target.tagName !== 'INPUT') {
-                window.location.href = "https://google.com";
+        // --- Global Key Listener for Panic ---
+        window.handlePanic = function(e) {
+            if (!window.activePanicKeys || window.activePanicKeys.length === 0) return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+
+            const pressedKey = e.key.toLowerCase();
+            const match = window.activePanicKeys.find(s => s.key.toLowerCase() === pressedKey);
+            
+            if (match && match.url) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = match.url;
             }
-        });
+        };
+        window.addEventListener('keydown', window.handlePanic);
+
 
         // --- Helper: Load Data into Settings ---
         function loadSettingsData() {
@@ -2740,9 +2932,11 @@
                 updatePfpPreview();
             }
             loadThemes();
+            loadPanicKeys(); // Refresh inputs when settings open
         }
 
         checkAutoLogin();
+        loadPanicKeys(); // Initial load for global listener
 
     </script>
 </body>

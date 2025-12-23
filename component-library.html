@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - Component Library</title>
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/npm/4sp-dv@latest/images/logo.png">
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* --- CORE STYLES (Extracted from 4simpleproblems_v5.html & dashboard.html) --- */
+        :root {
+            --bg-page: #040404;
+            --bg-container: #000000;
+            --border-color: #333;
+            --text-primary: #c0c0c0;
+            --text-light-grey: #d1d5db;
+            --accent-color: #6366f1; /* Indigo-500 */
+            --navbar-bg: #000000;
+            --navbar-border: #1f2937;
+            
+            --tab-text: #9ca3af;
+            --tab-hover-text: #ffffff;
+            --tab-active-text: #4f46e5;
+            --tab-active-bg: rgba(79, 70, 229, 0.1);
+            --tab-active-border: #4f46e5;
+        }
+
+        body { 
+            background-color: var(--bg-page); 
+            color: var(--text-primary); 
+            font-family: 'Geist', sans-serif; 
+            min-height: 100vh; 
+            margin: 0; 
+            font-weight: 300;
+            overflow-x: hidden;
+        }
+        
+        h1, h2, h3, .font-bold, .font-semibold, strong, b, .tracking-widest {
+            font-weight: 400 !important; /* Global override from original site */
+        }
+
+        /* --- TYPOGRAPHY UTILS --- */
+        .section-title {
+            font-size: 1.875rem;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+        
+        .subsection-title {
+            font-size: 1.25rem;
+            color: var(--text-light-grey);
+            margin-bottom: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .code-snippet {
+            background: #111;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            margin-top: 0.5rem;
+            display: block;
+            border: 1px solid #252525;
+        }
+
+                        /* --- ANIMATIONS --- */
+                        /* Shake Animation */
+                        @keyframes shake {
+                            0% { transform: translateX(0); }
+                            25% { transform: translateX(-5px) rotate(-5deg); }
+                            50% { transform: translateX(5px) rotate(5deg); }
+                            75% { transform: translateX(-5px) rotate(-5deg); }
+                            100% { transform: translateX(0); }
+                        }
+                        .shake-anim {
+                            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+                        }
+                
+                        /* Disable Animations Class */
+                        body.no-animations * {
+                            transition: none !important;
+                            animation: none !important;
+                            transform: none !important;
+                        }
+                
+                        /* Bubbly Spring Transition */
+                        body:not(.no-animations) .btn-toolbar-style, 
+                        body:not(.no-animations) .btn-lock-screen, 
+                        body:not(.no-animations) .icon-btn, 
+                        body:not(.no-animations) .nav-tab, 
+                        body:not(.no-animations) .zone-item, 
+                        body:not(.no-animations) .btn-card-action, 
+                        body:not(.no-animations) .input-text-style, 
+                        body:not(.no-animations) .input-lock-screen, 
+                        body:not(.no-animations) .input-key-style {
+                            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; /* Bubbly spring effect */
+                        }
+                        
+                                        /* Active/Click Scale Down - Snappy & Subtle */
+                        
+                                        body:not(.no-animations) .btn-toolbar-style:active, 
+                        
+                                        body:not(.no-animations) .btn-lock-screen:active, 
+                        
+                                        body:not(.no-animations) .icon-btn:active, 
+                        
+                                        body:not(.no-animations) .nav-tab:active, 
+                        
+                                        body:not(.no-animations) .zone-item:active, 
+                        
+                                        body:not(.no-animations) .btn-card-action:active {
+                        
+                                            transform: scale(0.96); /* Slightly more visible than 0.97 */
+                        
+                                            transition: transform 0.05s ease-out !important; /* Near instant to catch quick taps */
+                        
+                                        }
+                        
+                                
+                        
+                                        /* --- BUTTONS --- */
+                /* Toolbar Style (Settings Page) - Standardized */
+                .btn-toolbar-style {
+                    background: #0a0a0a;
+                    border: 1px solid #333;
+                    border-radius: 14px; /* Avoid fully rounded pill */
+                    color: #d1d5db;
+                    padding: 0.75rem 1.25rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+                }
+                        .btn-toolbar-style:hover {
+                            transform: scale(1.05) translateY(-2px); /* Bubbly Scale + Float */
+                            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.1); /* White-ish shadow */
+                            border-color: #fff;
+                            color: #ffffff;
+                        }                
+                /* Primary Override (Settings Page) */
+                .btn-toolbar-style.btn-primary-override {
+                    background-color: rgba(79, 70, 229, 0.1); /* Restored Purple Tint */
+                    border: 1px solid #4f46e5;
+                    color: #4f46e5;
+                }
+                        .btn-toolbar-style.btn-primary-override:hover {
+                            background-color: rgba(79, 70, 229, 0.2);
+                            border-color: #6366f1;
+                            color: #6366f1;
+                            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4); /* Purple Shadow */
+                        }        
+                /* Danger Override (Settings Page) */
+                .btn-toolbar-style.btn-primary-override-danger {
+                    background-color: rgba(220, 38, 38, 0.1); /* Restored Red Tint */
+                    border: 1px solid #dc2626;
+                    color: #dc2626;
+                }
+                        .btn-toolbar-style.btn-primary-override-danger:hover {
+                            background-color: rgba(220, 38, 38, 0.2);
+                            border-color: #ef4444;
+                            color: #ef4444;
+                            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4); /* Red Shadow */
+                        }        
+                /* Lock Screen Button - Updated to match */
+                .btn-lock-screen {
+                    padding: 0.75rem 1.25rem;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    border-radius: 14px; /* Avoid pill */
+                    color: rgb(99 102 241); /* indigo-500 */
+                    background-color: rgba(99, 102, 241, 0.1); /* Tinted BG */
+                    border: 1px solid rgb(99 102 241);
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+                }
+                        .btn-lock-screen:hover {
+                            transform: scale(1.05) translateY(-2px);
+                            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4); /* Indigo Shadow */
+                            background-color: rgba(99, 102, 241, 0.2);
+                        }        
+                /* Icon Button (Navbar) - Updated Radius */
+                .icon-btn {
+                    width: 40px; height: 40px; 
+                    border-radius: 14px; /* Avoid pill */
+                    border: 1px solid #4b5563; 
+                    display: flex; align-items: center; justify-content: center; color: #d1d5db; 
+                    cursor: pointer; background: transparent;
+                }
+                .icon-btn:hover { 
+                    background-color: #374151; color: white;
+                    transform: scale(1.1); /* Simple bubbly scale */
+                }
+        
+                /* Game Card Actions - Updated Radius */
+                .btn-card-action {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 2rem; height: 2rem; 
+                    border-radius: 14px; /* Avoid pill */
+                    background-color: transparent; border: 1px solid transparent;
+                    color: #9ca3af; cursor: pointer;
+                }
+                .btn-card-action:hover {
+                    background-color: rgba(79, 70, 229, 0.1);
+                    color: #4f46e5; border-color: #4f46e5;
+                    transform: scale(1.15); /* More bubbly */
+                }
+        
+                /* --- INPUTS --- */
+                /* Text Input (Settings) - Updated Radius */
+                .input-text-style {
+                    width: 100%; padding: 0.75rem; border: 1px solid #252525; 
+                    background-color: #111111; 
+                    border-radius: 14px; /* Avoid pill */
+                    color: #c0c0c0;
+                }
+                .input-text-style:focus { 
+                    border-color: #505050; outline: none; box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+                    transform: scale(1.02); /* Subtle pop on focus */
+                }
+        
+                /* Lock Screen Input - Updated Radius */
+                .input-lock-screen {
+                    background-color: #111;
+                    border: 1px solid #252525;
+                    color: white;
+                    border-radius: 14px; /* Avoid pill */
+                    padding: 0.75rem;
+                    text-align: center;
+                    letter-spacing: 0.2em;
+                    outline: none;
+                }
+                .input-lock-screen:focus {
+                    border-color: rgb(99 102 241);
+                    transform: scale(1.02);
+                }
+        
+                /* Panic Key Input - Updated Radius */
+                .input-key-style {
+                    width: 4rem; padding: 0.75rem;
+                    border: 1px solid #252525; background-color: #111111; 
+                    border-radius: 14px; /* Avoid pill */
+                    color: #c0c0c0;
+                    font-size: 1.1rem; text-align: center; font-weight: 500; text-transform: uppercase;
+                }
+                .input-key-style:focus {
+                    border-color: #505050; outline: none; box-shadow: 0 0 0 2px rgba(80, 80, 80, 0.5);
+                    transform: scale(1.1); /* Key pops up */
+                }
+        
+                /* --- CARDS & CONTAINERS --- */
+                /* Settings Box - Updated Radius */
+                .settings-box { 
+                    border: 1px solid #333; 
+                    border-radius: 24px; /* Kept larger for containers */
+                    background-color: #000000; 
+                    padding: 1.5rem;
+                }
+        
+                /* Dashboard Widget - Keeps original 32px as requested */
+                .dashboard-widget {
+                    border: 1px solid var(--border-color);
+                    background-color: var(--bg-container);
+                    padding: 2.5rem 4rem; 
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                    border-radius: 32px; /* Kept large */
+                    display: flex; align-items: center; justify-content: center; gap: 3.5rem;
+                }
+        
+                /* Navbar Tab - Updated Outline */
+                .nav-tab { 
+                    padding: 0.5rem 1rem; 
+                    color: var(--tab-text); 
+                    font-size: 0.875rem; font-weight: 400; 
+                    border-radius: 12px; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;
+                    border: 1px solid #333; /* Outline for Inactive */
+                    cursor: pointer;
+                    background: transparent;
+                }
+                .nav-tab:hover { 
+                    color: var(--tab-hover-text); 
+                    background-color: rgba(79, 70, 229, 0.05);
+                    border-color: #4f46e5;
+                    transform: scale(1.05); /* Tab bubbles up */
+                }
+                .nav-tab.active { 
+                    color: var(--tab-active-text); 
+                    border-color: var(--tab-active-border); 
+                    background-color: var(--tab-active-bg); 
+                    transform: scale(1.05); /* Active tab stays popped */
+                }
+        
+                /* --- GAME & MEDIA COMPONENTS --- */
+                .zone-item {
+                    background-color: #111111;
+                    border: 1px solid #252525;
+                    border-radius: 24px; /* Kept larger for containers */
+                    overflow: hidden;
+                    position: relative;
+                    width: 200px; /* Fixed for demo */
+                    aspect-ratio: 3/2;
+                    cursor: pointer;
+                }
+                .zone-item:hover {
+                    transform: scale(1.03) translateY(-4px); /* Combined Bubbly Scale + Float */
+                    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.2);
+                }
+                
+                .zone-overlay-title {
+                    position: absolute; top: 0.5rem; right: 0.5rem;
+                    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+                    border-radius: 14px; /* Avoid pill */
+                    padding: 0.25rem 0.75rem;
+                    font-size: 0.8rem; color: white; font-weight: 600;
+                }
+                
+                .zone-actions {
+                    position: absolute; bottom: 0.5rem; right: 0.5rem;
+                    background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+                    border-radius: 14px; /* Avoid pill */
+                    padding: 0.25rem 0.5rem;
+                    display: flex; gap: 0.5rem;
+                }
+        
+                /* Dropdown (Eagler) - Updated Radius */
+                .eagler-dropdown {
+                    position: relative;
+                    background-color: rgba(20, 20, 20, 0.98);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 14px; /* Avoid pill */
+                    padding: 0.5rem;
+                    min-width: 200px;
+                    display: inline-block;
+                }
+                .eagler-dropdown-link {
+                    display: block; padding: 0.6rem 0.8rem;
+                    color: #d1d5db; text-decoration: none;
+                    border-radius: 14px; /* Avoid pill */
+                    font-size: 0.9rem;
+                    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                .eagler-dropdown-link:hover {
+                    background-color: rgba(255, 255, 255, 0.1); color: white;
+                    transform: translateX(4px); /* Bubbly slide */
+                }
+        /* --- LAYOUT FOR THIS PAGE --- */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        
+        .component-wrapper {
+            background: #0a0a0a;
+            border: 1px dashed #333;
+            border-radius: 24px; /* Centralized 24px */
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            position: relative;
+        }
+        
+        /* Library Controls */
+        .library-controls {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* --- NOTIFICATIONS --- */
+        #notification-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .notification-toast {
+            background-color: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 14px;
+            padding: 0.75rem 1.25rem;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            min-width: 200px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease, background-color 0.2s;
+            opacity: 0;
+            pointer-events: auto;
+            cursor: default;
+        }
+        
+        .notification-toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification-toast.show:hover {
+            transform: scale(1.05) translateX(-5px); /* Hover Pop */
+            background-color: #151515;
+            border-color: #555;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+        }
+
+        .notification-icon {
+            font-size: 1.1rem;
+        }
+        .notification-icon.success { color: #4ade80; }
+        .notification-icon.info { color: #60a5fa; }
+        .notification-icon.warning { color: #fbbf24; }
+
+    </style>
+</head>
+<body class="p-8 max-w-7xl mx-auto relative">
+
+    <div class="library-controls" style="position: absolute; top: 2rem; right: 2rem; display: flex; gap: 1rem;">
+        <button id="toggle-mute-btn" class="icon-btn" title="Mute/Unmute Clicks">
+            <i class="fa-solid fa-volume-high"></i>
+        </button>
+        <button id="toggle-anim-btn" class="icon-btn" title="Toggle Animations">
+            <i class="fa-solid fa-bolt"></i>
+        </button>
+        <button id="test-notify-btn" class="icon-btn" title="Test Notification">
+            <i class="fa-solid fa-bell"></i>
+        </button>
+    </div>
+
+    <div id="notification-container"></div>
+
+    <header class="mb-12 border-b border-[#333] pb-8">
+        <h1 class="text-4xl text-white mb-2">4SP Component Library</h1>
+        <p class="text-[#888]">A comprehensive guide to the UI elements used across the v5 client.</p>
+    </header>
+
+    <!-- COLORS -->
+    <section>
+        <h2 class="section-title">Colors & Theme</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-4 rounded-3xl bg-[#040404] border border-[#333]">
+                <p class="text-white">Page Background</p>
+                <code class="text-xs text-[#666]">#040404</code>
+            </div>
+            <div class="p-4 rounded-3xl bg-[#000000] border border-[#333]">
+                <p class="text-white">Container Background</p>
+                <code class="text-xs text-[#666]">#000000</code>
+            </div>
+            <div class="p-4 rounded-3xl bg-[#111111] border border-[#333]">
+                <p class="text-white">Input Background</p>
+                <code class="text-xs text-[#666]">#111111</code>
+            </div>
+            <div class="p-4 rounded-3xl bg-[#333333]">
+                <p class="text-white">Border Color</p>
+                <code class="text-xs text-gray-400">#333333</code>
+            </div>
+            <div class="p-4 rounded-3xl bg-[#4f46e5]">
+                <p class="text-white">Primary (Indigo 500)</p>
+                <code class="text-xs text-indigo-200">#4f46e5</code>
+            </div>
+            <div class="p-4 rounded-3xl bg-[#c0c0c0]">
+                <p class="text-black">Primary Text</p>
+                <code class="text-xs text-gray-700">#c0c0c0</code>
+            </div>
+        </div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section>
+        <h2 class="section-title">Typography</h2>
+        <div class="component-wrapper items-start">
+            <h1 class="text-4xl text-white mb-4">Heading 1 (4xl)</h1>
+            <h2 class="text-3xl text-white mb-4">Heading 2 (3xl)</h2>
+            <h3 class="text-2xl text-white mb-4">Heading 3 (2xl)</h3>
+            <p class="text-[#c0c0c0]">Body text. The font family is 'Geist'. Note that font-weight 400 is forced on headings.</p>
+            <p class="text-[#505050] text-sm mt-2">Secondary text / metadata often uses #505050 or #888.</p>
+        </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section>
+        <h2 class="section-title">Buttons</h2>
+        
+        <h3 class="subsection-title">Toolbar / Settings Style</h3>
+        <p class="text-sm text-gray-500 mb-4">Unified style with 18px border radius, consistent padding, and shadow effects.</p>
+        <div class="component-grid">
+            <div class="component-wrapper">
+                <span class="component-label">Default</span>
+                <button class="btn-toolbar-style">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+            <div class="component-wrapper">
+                <span class="component-label">Primary Override</span>
+                <button class="btn-toolbar-style btn-primary-override">
+                    Save Changes
+                </button>
+            </div>
+            <div class="component-wrapper">
+                <span class="component-label">Danger Override</span>
+                <button class="btn-toolbar-style btn-primary-override-danger">
+                    Disconnect
+                </button>
+            </div>
+        </div>
+
+        <h3 class="subsection-title">Lock Screen / Authentication</h3>
+        <p class="text-sm text-gray-500 mb-4">Aligned with the toolbar style.</p>
+        <div class="component-grid">
+            <div class="component-wrapper">
+                <span class="component-label">Unlock Button</span>
+                <button class="btn-lock-screen">
+                    Access
+                </button>
+            </div>
+        </div>
+
+        <h3 class="subsection-title">Icon Buttons</h3>
+        <p class="text-sm text-gray-500 mb-4">Used in the Navbar and Overlays.</p>
+        <div class="component-grid">
+            <div class="component-wrapper">
+                <span class="component-label">User Profile</span>
+                <button class="icon-btn">
+                    <i class="fa-solid fa-user"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- INPUTS -->
+    <section>
+        <h2 class="section-title">Inputs</h2>
+        
+        <div class="component-grid">
+            <div class="component-wrapper w-full">
+                <span class="component-label">Standard Text Input</span>
+                <input type="text" class="input-text-style" placeholder="Enter username...">
+            </div>
+            <div class="component-wrapper w-full">
+                <span class="component-label">Lock Screen Code</span>
+                <input type="text" class="input-lock-screen" placeholder="XXXX-XXXX-XXXX" value="ABCD-1234-EFGH">
+            </div>
+            <div class="component-wrapper w-full">
+                <span class="component-label">Panic Key</span>
+                <div class="flex items-center gap-4">
+                    <input type="text" class="input-key-style" placeholder="-" value="K">
+                    <span class="text-sm text-gray-500">Redirects to...</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NAVIGATION -->
+    <section>
+        <h2 class="section-title">Navigation Elements</h2>
+        <div class="component-wrapper flex-row gap-4">
+            <div class="nav-tab">
+                <i class="fa-solid fa-house"></i> Inactive Tab
+            </div>
+            <div class="nav-tab active">
+                <i class="fa-solid fa-star"></i> Active Tab
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTAINERS -->
+    <section>
+        <h2 class="section-title">Cards & Containers</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="subsection-title">Settings Box</h3>
+                <div class="settings-box">
+                    <h3 class="text-xl font-bold text-white mb-2">Section Title</h3>
+                    <p class="text-gray-400 text-sm mb-4">This is a standard container used in the settings menu to group related controls.</p>
+                    <button class="btn-toolbar-style">Action</button>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="subsection-title">Dashboard Widget</h3>
+                <div class="dashboard-widget" style="width: 100%; gap: 1rem; padding: 2rem;">
+                    <!-- Mini mock of clock -->
+                    <div class="text-right">
+                        <div class="text-4xl text-gray-300">12:00</div>
+                        <div class="text-xs text-gray-500 uppercase">Tuesday</div>
+                    </div>
+                    <div style="width: 1px; height: 50px; background: #333;"></div>
+                    <!-- Mini mock of weather -->
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-cloud text-2xl text-gray-400"></i>
+                        <div class="text-3xl text-white">72°</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GAMES & MEDIA -->
+    <section class="mb-20">
+        <h2 class="section-title">Games & Media</h2>
+        
+        <h3 class="subsection-title">Game Card</h3>
+        <p class="text-sm text-gray-500 mb-4">Used in the Games page grid. Includes hover effects and action buttons.</p>
+        
+        <div class="component-grid">
+            <div class="component-wrapper">
+                <span class="component-label">Zone Item</span>
+                <div class="zone-item">
+                    <img src="https://placehold.co/300x200/222/999?text=Game+Thumb" class="w-full h-full object-cover opacity-50">
+                    <div class="zone-overlay-title">Minecraft</div>
+                    <div class="zone-actions">
+                        <button class="btn-card-action"><i class="fa-solid fa-play"></i></button>
+                        <button class="btn-card-action"><i class="fa-regular fa-star"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="component-wrapper">
+                <span class="component-label">Version Dropdown</span>
+                <div class="eagler-dropdown">
+                    <a href="#" class="eagler-dropdown-link">Release 1.8</a>
+                    <a href="#" class="eagler-dropdown-link">Release 1.5.2</a>
+                    <a href="#" class="eagler-dropdown-link">Beta 1.7.3</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // --- Sound Logic (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isMuted = false;
+        let areAnimationsEnabled = true;
+
+        function playClickSound() {
+            if (isMuted) return;
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.015);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.015);
+        }
+
+        function playTypeSound() {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            // Create a mechanical "clack"
+            // Part 1: High frequency "click" (Noise)
+            const bufferSize = audioCtx.sampleRate * 0.02;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 3000 + (Math.random() * 1000); // Randomize click pitch
+            noiseFilter.Q.value = 1;
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.01);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            // Part 2: Low "thud" (Sine)
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150 + (Math.random() * 50), audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            noise.start();
+            osc.start();
+            noise.stop(audioCtx.currentTime + 0.02);
+            osc.stop(audioCtx.currentTime + 0.02);
+        }
+
+        // --- Notification Logic ---
+        const notificationContainer = document.getElementById('notification-container');
+
+        function showNotification(message, iconClass = 'fa-solid fa-info-circle', type = 'info') {
+            // Limit to 3 notifications
+            while (notificationContainer.children.length >= 3) {
+                notificationContainer.removeChild(notificationContainer.firstChild);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'notification-toast';
+            toast.innerHTML = `
+                <i class="${iconClass} notification-icon ${type}"></i>
+                <span>${message}</span>
+            `;
+
+            notificationContainer.appendChild(toast);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+                playClickSound(); // Sound feedback
+            });
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentElement) toast.remove();
+                }, 300); // Wait for exit animation
+            }, 3000);
+        }
+
+        document.getElementById('test-notify-btn').addEventListener('click', () => {
+            showNotification('Test Notification', 'fa-solid fa-bell', 'info');
+        });
+
+        // --- Context-Aware Shortcuts ---
+        
+        // Listen for actual copy events
+        document.addEventListener('copy', (e) => {
+            const selection = window.getSelection().toString();
+            // Check if there is a text selection to copy
+            if (selection.length > 0) {
+                showNotification('Copied to clipboard', 'fa-solid fa-copy', 'success');
+            }
+        });
+
+        // Listen for actual paste events
+        document.addEventListener('paste', (e) => {
+            const active = document.activeElement;
+            // Only notify if pasting into an input or textarea
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                showNotification('Pasted from clipboard', 'fa-solid fa-paste', 'info');
+            }
+        });
+
+        // Listen for Ctrl+D (Duplicate) - Custom Logic
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+                const active = document.activeElement;
+                // Only notify/act if inside a text input
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                    e.preventDefault(); // Prevent browser bookmark
+                    showNotification('Duplicated item', 'fa-solid fa-clone', 'warning');
+                    // Logic to duplicate line or text could go here
+                }
+            }
+        });
+
+        // --- Controls Logic ---
+        const muteBtn = document.getElementById('toggle-mute-btn');
+        const animBtn = document.getElementById('toggle-anim-btn');
+        const muteIcon = muteBtn.querySelector('i');
+        const animIcon = animBtn.querySelector('i');
+
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            
+            // Visual Update
+            if (isMuted) {
+                muteIcon.classList.replace('fa-volume-high', 'fa-volume-xmark');
+                muteBtn.style.color = '#ef4444';
+                muteBtn.style.borderColor = '#ef4444';
+            } else {
+                muteIcon.classList.replace('fa-volume-xmark', 'fa-volume-high');
+                muteBtn.style.color = '';
+                muteBtn.style.borderColor = '';
+                playClickSound(); // Feedback
+            }
+
+            // Shake Animation
+            muteBtn.classList.add('shake-anim');
+            setTimeout(() => muteBtn.classList.remove('shake-anim'), 400);
+        });
+
+        animBtn.addEventListener('click', () => {
+            areAnimationsEnabled = !areAnimationsEnabled;
+            
+            if (areAnimationsEnabled) {
+                document.body.classList.remove('no-animations');
+                animIcon.classList.replace('fa-pause', 'fa-bolt');
+                animBtn.style.color = '';
+                animBtn.style.borderColor = '';
+                playClickSound();
+            } else {
+                document.body.classList.add('no-animations');
+                animIcon.classList.replace('fa-bolt', 'fa-pause');
+                animBtn.style.color = '#fbbf24'; // Amber
+                animBtn.style.borderColor = '#fbbf24';
+            }
+        });
+
+        // --- Global Listener ---
+        // Attach sound to all interactive elements
+        const interactiveSelectors = [
+            'button', '.nav-tab', '.zone-item', '.btn-card-action', 'a'
+        ];
+        
+        document.addEventListener('click', (e) => {
+            // Check if clicked element or parent matches selector
+            const target = e.target.closest(interactiveSelectors.join(','));
+            if (target && !target.closest('.library-controls')) { // Avoid double playing for controls
+                playClickSound();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            const target = e.target.closest('input, textarea');
+            if (target && !e.repeat) { // Prevent rapid firing on hold
+                playTypeSound();
+            }
+        });
+    </script>
+</body>
+</html>

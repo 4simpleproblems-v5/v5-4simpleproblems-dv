@@ -341,7 +341,7 @@ body:not(.no-animations) .btn-toolbar-style:active, body:not(.no-animations) .bt
                 <div id="explicitSoundsContainer" class="sound-grid"></div>
             </div>
 
-            <div class="mb-10">
+            <div class="mb-10" id="thirdPartySectionWrapper">
                 <h2 class="section-header text-blue-400/80 border-blue-900/30">Third Party Sounds</h2>
                 <div id="thirdPartySoundsContainer" class="sound-grid">
                      <div class="text-gray-500 italic col-span-full text-center p-10">Loading sounds from CDN...</div>
@@ -429,6 +429,7 @@ body:not(.no-animations) .btn-toolbar-style:active, body:not(.no-animations) .bt
         const explicitSoundsContainer = document.getElementById('explicitSoundsContainer');
         const thirdPartySoundsContainer = document.getElementById('thirdPartySoundsContainer');
         const explicitSectionWrapper = document.getElementById('explicitSectionWrapper');
+        const thirdPartySectionWrapper = document.getElementById('thirdPartySectionWrapper');
 
         // --- Soundboard Logic State ---
         let playingAudios = [];
@@ -466,14 +467,25 @@ body:not(.no-animations) .btn-toolbar-style:active, body:not(.no-animations) .bt
                         // Optional: Ensure any "explicit" sounds stop playing if they were active?
                         // For now we just hide the section as per typical admin toggle logic
                     }
+
+                    // Admin toggle logic for "thirdPartyEnabled". Default to true.
+                    const isThirdPartyEnabled = data.thirdPartyEnabled !== false;
+
+                    if (isThirdPartyEnabled) {
+                        thirdPartySectionWrapper.style.display = 'block';
+                    } else {
+                        thirdPartySectionWrapper.style.display = 'none';
+                    }
                 } else {
                     // Doc doesn't exist? Default to true.
                     explicitSectionWrapper.style.display = 'block';
+                    thirdPartySectionWrapper.style.display = 'block';
                 }
             }, (error) => {
                 console.warn("Config listener error:", error);
                 // Fallback to visible on error
                 explicitSectionWrapper.style.display = 'block';
+                thirdPartySectionWrapper.style.display = 'block';
             });
         }
 

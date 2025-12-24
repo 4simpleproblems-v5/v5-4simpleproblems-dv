@@ -6,7 +6,7 @@
     <title>4SP - VERSION 5 CLIENT</title>
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/npm/4sp-dv@latest/images/logo.png">
 
-    <base href="https://cdn.jsdelivr.net/npm/4sp-dv@1.0.20/logged-in/">
+    <base href="https://cdn.jsdelivr.net/npm/4sp-dv@1.0.21/logged-in/">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     
@@ -759,7 +759,7 @@
         const displayUsername = document.getElementById('display-username');
         const displayEmail = document.getElementById('display-email');
 
-        const BASE_URL = 'https://cdn.jsdelivr.net/npm/4sp-dv@1.0.20/logged-in/';
+        const BASE_URL = 'https://cdn.jsdelivr.net/npm/4sp-dv@1.0.21/logged-in/';
         const STORAGE_KEY = 'local_access_code';
         const USER_DATA_KEY = 'local_user_data';
         const LAST_PAGE_KEY = 'local_last_page';
@@ -785,7 +785,9 @@
         function initAdminKeybinds(db, auth, user) {
             console.log("[Admin Keybinds] Initializing for", user.uid);
             let explicitEnabled = true;
+            let thirdPartyEnabled = true; // Track third party state
             let lastEnablePressTime = 0;
+            let lastThirdPartyEnablePressTime = 0; // Separate timer for third party
             let configUnsubscribe = null;
 
             // Visual Feedback Helper
@@ -857,9 +859,14 @@
                             explicitEnabled = data.explicitEnabled;
                             console.log(`[Admin Keybinds] Explicit Enabled: ${explicitEnabled}`);
                         }
+                        if (data.thirdPartyEnabled !== undefined) {
+                            thirdPartyEnabled = data.thirdPartyEnabled;
+                            console.log(`[Admin Keybinds] Third Party Enabled: ${thirdPartyEnabled}`);
+                        }
                     } else {
                         console.log("[Admin Keybinds] Config doc missing. Defaulting to TRUE.");
                         explicitEnabled = true;
+                        thirdPartyEnabled = true;
                     }
                 }, (error) => console.error("Config Listen Error:", error));
             }
@@ -867,7 +874,7 @@
             // Init Listener
             subscribeToConfig();
 
-            // EXPOSE GLOBAL TRIGGER
+            // EXPOSE GLOBAL TRIGGERS
             window.triggerAdminKeybind = async () => {
                 console.log("[Admin Keybinds] Triggered via global function.");
                 if (explicitEnabled) {
@@ -901,13 +908,49 @@
                     }
                 }
             };
+            
+            window.triggerThirdPartyKeybind = async () => {
+                console.log("[Admin Keybinds] Triggered Third Party toggle.");
+                if (thirdPartyEnabled) {
+                    // Disable (Immediate)
+                    try {
+                        await setDoc(doc(db, 'config', 'soundboard'), { thirdPartyEnabled: false }, { merge: true });
+                        showAdminToast("Third Party Sounds: HIDDEN", "red");
+                        lastThirdPartyEnablePressTime = 0;
+                    } catch (err) {
+                        console.error("[Admin Keybinds] Failed to disable:", err);
+                        showAdminToast("Error: Check Console", "red");
+                    }
+                } else {
+                    // Enable (Double Press Safety)
+                    const now = Date.now();
+                    if (now - lastThirdPartyEnablePressTime < 1500) { 
+                        try {
+                            await setDoc(doc(db, 'config', 'soundboard'), { thirdPartyEnabled: true }, { merge: true });
+                            showAdminToast("Third Party Sounds: SHOWN", "green");
+                            lastThirdPartyEnablePressTime = 0;
+                        } catch (err) {
+                            console.error("[Admin Keybinds] Failed to enable:", err);
+                            showAdminToast("Error: Check Console", "red");
+                        }
+                    } else {
+                        showAdminToast("Press Ctrl+Shift+T again to SHOW", "blue");
+                        lastThirdPartyEnablePressTime = now;
+                    }
+                }
+            };
 
             // Key Listener (Parent Window)
             document.addEventListener('keydown', async (e) => {
-                // CHANGED: Trigger is Ctrl + Shift + E as requested
+                // Trigger is Ctrl + Shift + E
                 if (e.ctrlKey && e.shiftKey && (e.key.toLowerCase() === 'e' || e.code === 'KeyE')) {
                     e.preventDefault();
                     window.triggerAdminKeybind();
+                }
+                // Trigger is Ctrl + Shift + T
+                if (e.ctrlKey && e.shiftKey && (e.key.toLowerCase() === 't' || e.code === 'KeyT')) {
+                    e.preventDefault();
+                    window.triggerThirdPartyKeybind();
                 }
             });
         }
@@ -1461,6 +1504,12 @@
                                 if (e.ctrlKey && e.shiftKey && (e.key.toLowerCase() === 'e' || e.code === 'KeyE')) {
                                     e.preventDefault();
                                     if (window.parent.triggerAdminKeybind) window.parent.triggerAdminKeybind();
+                                }
+                                
+                                // Forward Admin Keybind (Ctrl + Shift + T) - Third Party Check
+                                if (e.ctrlKey && e.shiftKey && (e.key.toLowerCase() === 't' || e.code === 'KeyT')) {
+                                    e.preventDefault();
+                                    if (window.parent.triggerThirdPartyKeybind) window.parent.triggerThirdPartyKeybind();
                                 }
                                 
                                 // Typing Sound (Standard Inputs)

@@ -1138,7 +1138,7 @@ let db;
                 text-decoration: none; line-height: 1.5; display: flex; align-items: center; margin-right: 8px; 
                 border: 1px solid transparent; 
             }
-            .nav-tab:not(.active):hover { color: var(--tab-hover-text); border-color: var(--tab-hover-border); background-color: var(--tab-hover-bg); }
+            .nav-tab:not(.active):hover { color: var(--tab-hover-text); border-color: var(--tab-active-border); background-color: var(--tab-hover-bg); }
             .nav-tab.active { color: var(--tab-active-text); border-color: var(--tab-active-border); background-color: var(--tab-active-bg); }
             .nav-tab.active:hover { color: var(--tab-active-hover-text); border-color: var(--tab-active-hover-border); background-color: var(--tab-active-hover-bg); }
             

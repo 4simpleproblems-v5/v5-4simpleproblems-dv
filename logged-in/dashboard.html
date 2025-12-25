@@ -70,11 +70,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 3.5rem; 
+            /* gap: 3.5rem;  REMOVED: Using margins on divider for better hiding animation */
             
             /* Enable absolute positioning for spinner */
             position: relative; 
-            min-height: 200px; /* Ensure height stability */
+            height: 220px; /* Forced fixed height for stability */
+            overflow: hidden;
         }
 
         .dashboard-widget:hover {
@@ -126,6 +127,7 @@
             width: 1px;
             height: 100px; 
             background-color: #262626;
+            margin: 0 3.5rem; /* Replaces widget gap */
             transition: opacity 0.5s ease, width 0.5s ease, margin 0.5s ease;
         }
         .vertical-divider.hidden-anim {
@@ -141,7 +143,7 @@
             flex-direction: column;
             justify-content: center;
             gap: 0.5rem;
-            transition: opacity 0.5s ease, transform 0.5s ease, width 0.5s ease, margin 0.5s ease;
+            transition: opacity 0.5s ease, transform 0.5s ease, width 0.5s ease, margin 0.5s ease, height 0.5s ease;
             opacity: 1;
             transform: translateY(0);
             overflow: visible;
@@ -149,6 +151,7 @@
         .weather-section.hidden-anim {
             opacity: 0;
             width: 0;
+            height: 0;
             margin: 0;
             transform: translateY(10px);
             pointer-events: none;

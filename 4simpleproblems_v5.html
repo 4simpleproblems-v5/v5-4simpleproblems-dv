@@ -106,7 +106,7 @@
         font-size: 1rem; 
         cursor: pointer; 
         opacity: 1; 
-        transition: opacity 0.3s, color 0.3s ease; 
+        transition: opacity 0.3s, color 0.3s ease, background-color 0.3s ease; 
         z-index: 55; 
         pointer-events: auto;
         background: transparent;
@@ -115,13 +115,17 @@
 
     #glide-left { 
         left: 0; 
-        background: linear-gradient(to right, var(--navbar-bg, #000000) 30%, transparent); 
+        background-color: var(--navbar-bg, #000000);
+        -webkit-mask-image: linear-gradient(to right, black 30%, transparent);
+        mask-image: linear-gradient(to right, black 30%, transparent);
         justify-content: flex-start; 
         padding-left: 8px; 
     }
     #glide-right { 
         right: 0; 
-        background: linear-gradient(to left, var(--navbar-bg, #000000) 30%, transparent); 
+        background-color: var(--navbar-bg, #000000);
+        -webkit-mask-image: linear-gradient(to left, black 30%, transparent);
+        mask-image: linear-gradient(to left, black 30%, transparent);
         justify-content: flex-end; 
         padding-right: 8px; 
     }

@@ -775,6 +775,15 @@
         const displayEmail = document.getElementById('display-email');
 
         const BASE_URL = 'https://cdn.jsdelivr.net/npm/4sp-dv@1.0.27/logged-in/';
+        
+        // Preload Logos
+        const preloadImgs = [
+            'https://cdn.jsdelivr.net/npm/4sp-dv@latest/images/logo-dark.png',
+            'https://cdn.jsdelivr.net/npm/4sp-dv@latest/images/logo-christmas.png',
+            'https://cdn.jsdelivr.net/npm/4sp-asset-library@latest/logo.png'
+        ];
+        preloadImgs.forEach(src => new Image().src = src);
+
         const STORAGE_KEY = 'local_access_code';
         const USER_DATA_KEY = 'local_user_data';
         const LAST_PAGE_KEY = 'local_last_page';
@@ -1633,6 +1642,9 @@
                     if (sec.id === `tab-${tabId}`) sec.classList.remove('hidden');
                     else sec.classList.add('hidden');
                 });
+
+                // Save State
+                localStorage.setItem('last_settings_tab', tabId);
             });
         });
 
@@ -1704,7 +1716,7 @@
         // Letter Avatar Setup
         // Removed last color (Grey) to make 10 colors (5x2 grid)
         const letterColors = [
-            'EF4444', 'FCA5A5', // Red
+            'EF4444', // Red
             'F97316', 'FDBA74', // Orange
             'EAB308', 'FDE047', // Yellow
             '22C55E', '86EFAC', // Green
@@ -2131,23 +2143,35 @@
             // Apply Logo & Tinting
             const logoImg = document.getElementById('navbar-logo');
             if (logoImg) {
-                // Update Source (Use absolute path comparison or specific logic)
-                // We just set it. Browser handles cache.
-                // Note: The original navigation.js checked src endsWith to avoid reload flicker, but simple assignment is okay.
                 if (!logoImg.src.includes(logoSrc)) {
                      logoImg.src = logoSrc;
                 }
 
-                // Apply Tinting
                 const noFilterThemes = ['Dark', 'Light', 'Christmas'];
-                if (noFilterThemes.includes(theme.name)) {
+                const isNoFilter = noFilterThemes.includes(theme.name);
+                
+                // Check if mode is changing (Tinted <-> Standard)
+                // We check existing transform state
+                const wasNoFilter = logoImg.style.transform === '' || logoImg.style.transform === 'none';
+                const modeChanged = isNoFilter !== wasNoFilter;
+
+                if (modeChanged) {
+                    logoImg.style.transition = 'none';
+                }
+
+                if (isNoFilter) {
                     logoImg.style.filter = ''; 
                     logoImg.style.transform = '';
                 } else {
                     const tintColor = theme['tab-active-text'] || '#ffffff';
-                    // The original navigation.js used this trick for SVG coloring via filter
                     logoImg.style.filter = `drop-shadow(100px 0 0 ${tintColor})`;
                     logoImg.style.transform = 'translateX(-100px)';
+                }
+
+                if (modeChanged) {
+                    // Force Reflow
+                    void logoImg.offsetWidth; 
+                    logoImg.style.transition = ''; // Restore
                 }
             }
 
@@ -2406,6 +2430,14 @@
 
                 updatePfpPreview();
             }
+
+            // Restore Tab
+            const lastTab = localStorage.getItem('last_settings_tab');
+            if (lastTab) {
+                const tabBtn = document.querySelector(`.settings-tab[data-tab="${lastTab}"]`);
+                if(tabBtn) tabBtn.click();
+            }
+
             loadThemes();
             loadPanicKeys(); 
         }

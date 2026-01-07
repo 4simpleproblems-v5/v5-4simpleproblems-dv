@@ -663,6 +663,29 @@
             // ... existing logic ...
         }
 
+        // --- Instructions ---
+        function setupInstructionOverlay() {
+            if (localStorage.getItem(INSTRUCTION_KEY) !== 'seen') {
+                instructionOverlay.style.display = 'flex';
+                // Trigger reflow
+                setTimeout(() => {
+                    instructionOverlay.classList.remove('opacity-0');
+                    instructionOverlay.classList.add('opacity-100');
+                }, 10);
+                
+                instructionInput.addEventListener('input', (e) => {
+                    if (e.target.value.trim().toLowerCase() === 'i understand') {
+                        instructionOverlay.classList.remove('opacity-100');
+                        instructionOverlay.classList.add('opacity-0');
+                        setTimeout(() => {
+                            instructionOverlay.style.display = 'none';
+                            localStorage.setItem(INSTRUCTION_KEY, 'seen');
+                        }, 300);
+                    }
+                });
+            }
+        }
+
         // Init
         checkAutoLogin();
 

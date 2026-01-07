@@ -380,7 +380,33 @@
             });
         }
 
-        // Auth Logic
+        // --- AUTH LOGIC & HELPERS ---
+        
+        function updateUIWithUser(userData) {
+            if (!userData) return;
+            displayUsername.textContent = userData.username;
+            displayEmail.textContent = userData.email;
+            
+            const pfpType = userData.pfpType || 'letter';
+            let pfpHtml = '';
+            if (pfpType === 'custom' && userData.customPfp) {
+                pfpHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-[14px]" alt="Profile">`;
+            } else {
+                const initial = (userData.username || 'U').charAt(0).toUpperCase();
+                const letter = userData.letterAvatarText || initial;
+                const bgColor = userData.pfpLetterBg || '#3B82F6';
+                pfpHtml = `<div class="w-full h-full rounded-[14px] flex items-center justify-center text-white font-bold text-lg" style="background-color: ${bgColor};">${letter}</div>`;
+            }
+            authBtn.innerHTML = pfpHtml;
+        }
+
+        function applyTheme(theme) {
+            if (!theme) return;
+            const root = document.documentElement;
+            if (theme['navbar-bg']) root.style.setProperty('--navbar-bg', theme['navbar-bg']);
+            if (theme['navbar-border']) root.style.setProperty('--navbar-border', theme['navbar-border']);
+        }
+
         async function fetchUserData(ownerUid) {
             console.log("Fetching user data for:", ownerUid);
             if (userDataUnsubscribe) userDataUnsubscribe();
@@ -407,10 +433,10 @@
                              currentUser = newUserData;
                              applyTheme(data.navbarTheme);
                          }
-                         resolve(); // Resolve immediately after first processing
+                         resolve(); 
                      }, (error) => {
                          console.error("Snapshot error:", error);
-                         resolve(); // Resolve anyway to not block
+                         resolve(); 
                      });
                 } catch (e) { 
                     console.error("User fetch error", e); 

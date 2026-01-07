@@ -891,6 +891,9 @@
 
             // --- Custom 404 Page Helper ---
             const show404 = (errorMsg = "Game content unavailable.") => {
+                // Ensure frame is cleared
+                zoneFrame.src = 'about:blank';
+                // Show overlay error
                 const doc = zoneFrame.contentWindow.document;
                 doc.open();
                 doc.write(`
@@ -907,7 +910,7 @@
                         </style>
                     </head>
                     <body>
-                        <h1>404</h1>
+                        <h1>Load Failed</h1>
                         <p><strong>${game.name}</strong> could not be loaded.<br><span style="font-size: 0.9rem; opacity: 0.7;">${errorMsg}</span></p>
                         <div class="btn" onclick="window.parent.closeZoneViewer()">Return to Hub</div>
                     </body>
@@ -931,7 +934,6 @@
             }
 
             // --- INJECT FAVORITE BUTTON IN PLAYER HEADER ---
-            // Remove existing if any
             const existingFav = controls.querySelector('.player-fav-btn');
             if (existingFav) existingFav.remove();
 
@@ -946,58 +948,65 @@
                 toggleFavorite(game.id);
                 favBtn.classList.toggle('favorited');
             };
-
-            // Prepend to controls (Left side)
             controls.prepend(favBtn);
 
             zoneNameEl.textContent = game.name;
-            
-            // RESET FRAME BEFORE LOAD
             zoneFrame.src = 'about:blank';
             
-            // SECURITY: Set sandbox permissions
             const sandboxRules = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock';
             zoneFrame.setAttribute('sandbox', sandboxRules);
             zoneFrame.setAttribute('allow', 'fullscreen; pointer-lock; autoplay; clipboard-write');
 
-            // --- REVISED LOGIC FOR LOADING GAMES ---
+            // --- REVISED LOGIC FOR LOADING GAMES WITH RETRY ---
             const isStandardURLGame = game.category === 'StrongdogXP' || game.category === 'Others' || game.category === 'GN-Math';
             
-            if (isStandardURLGame) {
-                // Try fetching to see if it exists (Fixes the jsdelivr redirect bug)
+            const attemptLoad = async (retriesLeft) => {
                 try {
+                    // Pre-check URL validity
                     const check = await fetch(game.url, { method: 'HEAD' });
-                    if (!check.ok) throw new Error("File not found");
-                    zoneFrame.src = game.url;
+                    if (!check.ok) throw new Error(`HTTP ${check.status}`);
                     
-                    // SHOW WITH ANIMATION
-                    zoneViewer.style.display = "flex";
-                    zoneViewer.classList.remove('animate-fade-out');
-                    zoneViewer.classList.add('active', 'animate-fade-in');
-                } catch (e) {
-                    show404("The game source is broken or blocked.");
-                }
-            } else {
-                fetch(`${game.url}?t=${Date.now()}`)
-                    .then(response => {
+                    // If successful, set src
+                    if (isStandardURLGame) {
+                        zoneFrame.src = game.url;
+                        // Prevent showing raw directory listing if it resolves to a folder
+                        zoneFrame.onload = () => {
+                            try {
+                                // Check if title indicates directory listing (heuristic)
+                                const title = zoneFrame.contentDocument ? zoneFrame.contentDocument.title : "";
+                                if (title.includes("Index of") || title.includes("Directory listing")) {
+                                    throw new Error("Directory listing detected");
+                                }
+                            } catch (e) {
+                                // Cross-origin might block access, assume OK if we can't check
+                            }
+                        };
+                    } else {
+                        // For embedded content fetching
+                        const response = await fetch(`${game.url}?t=${Date.now()}`);
                         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-                        return response.text();
-                    })
-                    .then(html => {
+                        const html = await response.text();
                         const doc = zoneFrame.contentWindow.document;
                         doc.open();
                         doc.write(html);
                         doc.close();
-                        
-                        // SHOW WITH ANIMATION
-                        zoneViewer.style.display = "flex";
-                        zoneViewer.classList.remove('animate-fade-out');
-                        zoneViewer.classList.add('active', 'animate-fade-in');
-                    })
-                    .catch(error => {
-                        show404(error.message);
-                    });
-            }
+                    }
+
+                    zoneViewer.style.display = "flex";
+                    zoneViewer.classList.remove('animate-fade-out');
+                    zoneViewer.classList.add('active', 'animate-fade-in');
+
+                } catch (e) {
+                    console.warn(`Load failed for ${game.name}. Retries left: ${retriesLeft}`, e);
+                    if (retriesLeft > 0) {
+                        setTimeout(() => attemptLoad(retriesLeft - 1), 1000); // Retry after 1s
+                    } else {
+                        show404("The game files could not be loaded after multiple attempts.");
+                    }
+                }
+            };
+
+            attemptLoad(2); // Try 3 times total (1 initial + 2 retries)
         }
 
         function closeZoneViewer() {

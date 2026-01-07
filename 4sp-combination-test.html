@@ -382,104 +382,114 @@
 
         // Auth Logic
         async function fetchUserData(ownerUid) {
+            console.log("Fetching user data for:", ownerUid);
             if (userDataUnsubscribe) userDataUnsubscribe();
-            try {
-                 userDataUnsubscribe = onSnapshot(doc(db, "users", ownerUid), (docSnap) => {
-                     if (docSnap.exists()) {
-                         const data = docSnap.data();
-                         const newUserData = {
-                             ...currentUser,
-                             uid: ownerUid,
-                             username: data.username || "User",
-                             email: data.email || "No email",
-                             pfpType: data.pfpType,
-                             customPfp: data.customPfp,
-                             pfpLetterBg: data.pfpLetterBg,
-                             letterAvatarText: data.letterAvatarText, 
-                             navbarTheme: data.navbarTheme 
-                         };
-                         localStorage.setItem(USER_DATA_KEY, JSON.stringify(newUserData));
-                         updateUIWithUser(newUserData);
-                         currentUser = newUserData;
-                         applyTheme(data.navbarTheme);
-                     }
-                 });
-            } catch (e) { console.error("User fetch error", e); }
-        }
-
-        function updateUIWithUser(userData) {
-            if (!userData) return;
-            displayUsername.textContent = userData.username;
-            displayEmail.textContent = userData.email;
             
-            // PFP
-            const pfpType = userData.pfpType || 'letter';
-            let pfpHtml = '';
-            if (pfpType === 'custom' && userData.customPfp) {
-                pfpHtml = `<img src="${userData.customPfp}" class="w-full h-full object-cover rounded-[14px]" alt="Profile">`;
-            } else {
-                const initial = (userData.username || 'U').charAt(0).toUpperCase();
-                const letter = userData.letterAvatarText || initial;
-                const bgColor = userData.pfpLetterBg || '#3B82F6';
-                pfpHtml = `<div class="w-full h-full rounded-[14px] flex items-center justify-center text-white font-bold text-lg" style="background-color: ${bgColor};">${letter}</div>`;
-            }
-            authBtn.innerHTML = pfpHtml;
+            return new Promise((resolve) => {
+                try {
+                     userDataUnsubscribe = onSnapshot(doc(db, "users", ownerUid), (docSnap) => {
+                         if (docSnap.exists()) {
+                             console.log("User data snapshot received");
+                             const data = docSnap.data();
+                             const newUserData = {
+                                 ...currentUser,
+                                 uid: ownerUid,
+                                 username: data.username || "User",
+                                 email: data.email || "No email",
+                                 pfpType: data.pfpType,
+                                 customPfp: data.customPfp,
+                                 pfpLetterBg: data.pfpLetterBg,
+                                 letterAvatarText: data.letterAvatarText, 
+                                 navbarTheme: data.navbarTheme 
+                             };
+                             localStorage.setItem(USER_DATA_KEY, JSON.stringify(newUserData));
+                             updateUIWithUser(newUserData);
+                             currentUser = newUserData;
+                             applyTheme(data.navbarTheme);
+                         }
+                         resolve(); // Resolve immediately after first processing
+                     }, (error) => {
+                         console.error("Snapshot error:", error);
+                         resolve(); // Resolve anyway to not block
+                     });
+                } catch (e) { 
+                    console.error("User fetch error", e); 
+                    resolve(); 
+                }
+            });
         }
 
-        function applyTheme(theme) {
-            if (!theme) return;
-            const root = document.documentElement;
-            // Basic theme application
-            if (theme['navbar-bg']) root.style.setProperty('--navbar-bg', theme['navbar-bg']);
-            if (theme['navbar-border']) root.style.setProperty('--navbar-border', theme['navbar-border']);
-            // ... add more as needed
-        }
+        // ... [Middle code] ...
 
         // Lock Screen Logic
         async function checkAutoLogin() {
             const savedCode = localStorage.getItem(STORAGE_KEY);
+            console.log("Checking auto-login for code:", savedCode);
+            
             if (savedCode) {
                 loadingText.classList.remove('hidden');
                 unlockBtn.classList.add('hidden');
                 codeInput.classList.add('hidden');
                 
+                // Timeout fail-safe
+                const timeoutId = setTimeout(() => {
+                    console.warn("Auto-login timed out");
+                    resetLockScreen("Connection timed out.");
+                }, 8000); // 8s timeout
+
                 try {
                     const docRef = doc(db, "access_codes", savedCode);
                     const docSnap = await getDoc(docRef);
+                    clearTimeout(timeoutId);
 
                     if (docSnap.exists() && docSnap.data().active) {
+                        console.log("Code active. Owner:", docSnap.data().ownerUid);
                         const codeData = docSnap.data();
-                        if (codeData.ownerUid) await fetchUserData(codeData.ownerUid);
+                        if (codeData.ownerUid) {
+                            await fetchUserData(codeData.ownerUid);
+                        }
+                        console.log("Launching app...");
                         launchApp();
                         return;
                     } else {
+                        console.log("Code invalid or inactive");
                         localStorage.removeItem(STORAGE_KEY);
                         resetLockScreen("Session expired.");
                     }
                 } catch(e) {
+                    clearTimeout(timeoutId);
                     console.error("Login error", e);
                     resetLockScreen("Connection failed.");
                 }
+            } else {
+                console.log("No saved code.");
             }
         }
 
         function resetLockScreen(msg) {
+            console.log("Resetting lock screen:", msg);
             loadingText.classList.add('hidden');
             unlockBtn.classList.remove('hidden');
+            unlockBtn.disabled = false;
+            unlockBtn.innerText = "Access";
             codeInput.classList.remove('hidden');
             lockMessage.innerText = msg || "";
         }
 
         function launchApp() {
+            console.log("App launched!");
             lockScreen.classList.add('hidden');
+            // Force hide just in case
+            lockScreen.style.display = 'none';
             navbar.style.display = 'flex';
-            gamesMainContainer.style.display = 'block'; // Show games content
+            gamesMainContainer.style.display = 'block'; 
             renderNavbar();
-            initGamesLogic(); // Start Games Logic
+            initGamesLogic(); 
         }
 
         unlockBtn.addEventListener('click', async () => {
             let code = codeInput.value.trim().toUpperCase().replace(/-/g, '');
+            console.log("Manual unlock attempt:", code);
             if (code.length !== 12) { lockMessage.innerText = "Invalid format."; return; }
             
             lockMessage.innerText = "";
@@ -489,19 +499,28 @@
             try {
                 const docRef = doc(db, "access_codes", code);
                 const docSnap = await getDoc(docRef);
-                if (!docSnap.exists() || !docSnap.data().active) throw new Error("Invalid code.");
+                
+                if (!docSnap.exists()) throw new Error("Code not found.");
                 
                 const data = docSnap.data();
-                if (data.claimed && localStorage.getItem(STORAGE_KEY) !== code) throw new Error("Code used.");
+                if (!data.active) throw new Error("Code inactive.");
+                
+                if (data.claimed) {
+                    if (localStorage.getItem(STORAGE_KEY) !== code) throw new Error("Code already used.");
+                }
 
-                await updateDoc(docRef, { claimed: true });
+                if (!data.claimed) {
+                    await updateDoc(docRef, { claimed: true });
+                }
+                
                 localStorage.setItem(STORAGE_KEY, code);
                 if (data.ownerUid) await fetchUserData(data.ownerUid);
                 launchApp();
             } catch (e) {
-                lockMessage.innerText = e.message;
+                console.error("Manual unlock failed:", e);
+                lockMessage.innerText = e.message || "Error";
                 unlockBtn.disabled = false;
-                unlockBtn.innerText = "Login";
+                unlockBtn.innerText = "Access";
             }
         });
 

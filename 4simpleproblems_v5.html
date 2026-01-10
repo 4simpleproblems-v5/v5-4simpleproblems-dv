@@ -1580,6 +1580,58 @@
             // Normal fetch flow for ALL pages
             const url = BASE_URL + pageName;
             
+            // SPECIAL HANDLING FOR GAMES.HTML: Isolated shell to fix file pulling
+            if (pageName.includes('games.html')) {
+                fetch(url)
+                    .then(res => res.text())
+                    .then(html => {
+                        const oldFrame = document.getElementById('app-frame');
+                        const newFrame = document.createElement('iframe');
+                        newFrame.id = 'app-frame';
+                        newFrame.style.cssText = "width: 100%; height: 100%; border: none; display: block; flex-grow: 1;";
+                        if (oldFrame) {
+                            newFrame.style.cssText = oldFrame.style.cssText;
+                            if (oldFrame.parentNode) oldFrame.parentNode.replaceChild(newFrame, oldFrame);
+                        } else {
+                            document.body.appendChild(newFrame);
+                        }
+                        appFrame = newFrame;
+                        
+                        const doc = newFrame.contentWindow.document;
+                        doc.open();
+                        // Minimal injection to fix paths and preserve parent communication
+                        const baseTag = '<base href="' + BASE_URL + '">';
+                        const patch = `
+                            <script>
+                                window.openSettings = function() { window.parent.openSettings(); };
+                                document.addEventListener('click', e => {
+                                    const link = e.target.closest('a');
+                                    if (link && link.href && (link.href.includes('settings.html') || link.href === '#settings')) {
+                                        e.preventDefault();
+                                        window.parent.openSettings();
+                                    }
+                                });
+                            <\/script>
+                        `;
+                        let modifiedHtml = html.replace('<head>', '<head>' + baseTag + patch);
+                        doc.write(modifiedHtml);
+                        doc.close();
+
+                        if (loaderBar) loaderBar.style.width = "100%";
+                        setTimeout(() => {
+                             if (loader) {
+                                 loader.classList.add('opacity-0');
+                                 loader.classList.remove('active');
+                                 setTimeout(() => {
+                                     loader.classList.add('hidden');
+                                     if(loaderBar) loaderBar.style.width = "0%";
+                                 }, 200);
+                             }
+                        }, 200);
+                    });
+                return;
+            }
+            
             fetch(url)
                 .then(res => res.text())
                 .then(html => {

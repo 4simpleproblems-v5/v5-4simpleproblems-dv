@@ -363,12 +363,98 @@ body:not(.no-animations) .btn-toolbar-style:active, body:not(.no-animations) .bt
             </div>
     </div>
 
+    <button id="stats-btn" class="fixed bottom-8 left-8 w-10 h-10 rounded-xl bg-black border border-[#333] text-gray-400 flex items-center justify-center hover:bg-[#111] hover:text-white hover:scale-110 transition-all duration-300 z-50">
+        <i class="fa-solid fa-chart-simple"></i>
+    </button>
+
+    <div id="stats-dropdown" class="fixed bottom-20 left-8 bg-black border border-[#333] rounded-xl p-4 min-w-[240px] opacity-0 pointer-events-none transform translate-y-4 transition-all duration-300 z-50 shadow-2xl">
+        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-[#222]">
+            <div class="w-10 h-10 rounded-full bg-[#111] flex items-center justify-center text-white font-bold text-lg" id="stat-avatar">
+                ?
+            </div>
+            <div>
+                <div class="text-white text-sm font-medium" id="stat-email">Loading...</div>
+                <div class="text-xs text-gray-500 font-mono" id="stat-uid">...</div>
+            </div>
+        </div>
+        
+        <div class="space-y-3">
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold mb-1">Member Since</div>
+                <div class="text-gray-300 text-sm" id="stat-created">...</div>
+            </div>
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold mb-1">Last Sign In</div>
+                <div class="text-gray-300 text-sm" id="stat-last-login">...</div>
+            </div>
+             <div>
+                <div class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold mb-1">Provider</div>
+                <div class="text-gray-300 text-sm flex items-center gap-2" id="stat-provider">
+                    ...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <button id="retry-weather-btn" onclick="retryWeather()" title="Retry Weather">
         <i class="fa-solid fa-cloud-sun"></i>
     </button>
 
     <script type="module">
         import { firebaseConfig } from '../firebase-config.js';
+
+        // --- STATS DROPDOWN LOGIC ---
+        const statsBtn = document.getElementById('stats-btn');
+        const statsDropdown = document.getElementById('stats-dropdown');
+        
+        if(statsBtn && statsDropdown) {
+            statsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = statsDropdown.classList.contains('opacity-100');
+                if (isVisible) {
+                    statsDropdown.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                    statsDropdown.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                } else {
+                    statsDropdown.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                    statsDropdown.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+                }
+            });
+
+            // Close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!statsDropdown.contains(e.target) && !statsBtn.contains(e.target)) {
+                    statsDropdown.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+                    statsDropdown.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                }
+            });
+        }
+
+        function populateStats(user) {
+            if (!user) return;
+            
+            // Email & UID
+            document.getElementById('stat-email').textContent = user.email || 'Anonymous';
+            document.getElementById('stat-uid').textContent = user.uid.substring(0, 12) + '...';
+            document.getElementById('stat-avatar').textContent = (user.email || 'A').charAt(0).toUpperCase();
+
+            // Dates
+            const created = new Date(user.metadata.creationTime);
+            const lastLogin = new Date(user.metadata.lastSignInTime);
+            
+            document.getElementById('stat-created').textContent = created.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('stat-last-login').textContent = lastLogin.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at ' + lastLogin.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+            // Provider
+            const providerId = user.providerData[0]?.providerId || 'password';
+            let providerIcon = 'fa-envelope';
+            let providerName = 'Email';
+
+            if (providerId.includes('google')) { providerIcon = 'fa-google'; providerName = 'Google'; }
+            else if (providerId.includes('github')) { providerIcon = 'fa-github'; providerName = 'GitHub'; }
+            else if (providerId.includes('microsoft')) { providerIcon = 'fa-microsoft'; providerName = 'Microsoft'; }
+            
+            document.getElementById('stat-provider').innerHTML = `<i class="fa-brands ${providerIcon}"></i> ${providerName}`;
+        }
 
         // --- GLOBAL STATE ---
         let CURRENT_LAT = null;
@@ -709,7 +795,9 @@ body:not(.no-animations) .btn-toolbar-style:active, body:not(.no-animations) .bt
             waitForFirebase(() => {
                  if (firebase.auth) {
                     firebase.auth().onAuthStateChanged((user) => {
-                        if (!user && !window._LOCAL_MODE) {
+                        if (user) {
+                            populateStats(user);
+                        } else if (!window._LOCAL_MODE) {
                             window.location.replace(redirectPath);
                         }
                     });

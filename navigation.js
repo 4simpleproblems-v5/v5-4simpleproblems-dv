@@ -603,8 +603,8 @@ let db;
         const container = document.getElementById('navbar-container');
         if (!container) return; 
 
-        const navElement = container.querySelector('nav');
-        const tabWrapper = navElement.querySelector('.tab-wrapper');
+        // Fix for navigation.js:607 crash
+        const tabWrapper = container.querySelector('.tab-wrapper');
         const authControlsWrapper = document.getElementById('auth-controls-wrapper');
         const navbarLogo = document.getElementById('navbar-logo');
 

@@ -1116,8 +1116,12 @@
 
                 const docRef = doc(db, 'analytics', sessionId);
                 
+                // --- FIX: Determine userId before writing ---
+                const currentUid = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : 'anonymous';
+
                 // Using Firestore functions imported at top
                 setDoc(docRef, {
+                    userId: currentUid, // <--- ADDED THIS FIELD
                     sessionId: sessionId,
                     userAgent: navigator.userAgent,
                     lastActive: serverTimestamp(),

@@ -1274,7 +1274,66 @@
                 // Initial fetch to check admin status (less frequent change)
                  const adminDoc = await getDoc(doc(db, "admins", ownerUid));
 
-                 userDataUnsubscribe = onSnapshot(doc(db, "users", ownerUid), (docSnap) => {
+                 userDataUnsubscribe = onSnapshot(doc(db, "users", ownerUid), async (docSnap) => {
+                     // --- INTEGRITY CHECK START ---
+                     let needsRepair = false;
+                     let missingFields = [];
+                     
+                     if (!docSnap.exists()) {
+                         console.warn("User document missing. Attempting repair...");
+                         needsRepair = true;
+                         missingFields = ['document_missing'];
+                     } else {
+                         const d = docSnap.data();
+                         // Required fields based on connection.html schema
+                         if (!d.email) missingFields.push('email');
+                         if (!d.username) missingFields.push('username');
+                         if (!d.authMethod) missingFields.push('authMethod');
+                         if (!d.createdAt) missingFields.push('createdAt');
+                         // emailVerified is boolean, check for undefined
+                         if (d.emailVerified === undefined) missingFields.push('emailVerified');
+                         
+                         if (missingFields.length > 0) {
+                             console.warn("User document incomplete:", missingFields);
+                             needsRepair = true;
+                         }
+                     }
+
+                     if (needsRepair) {
+                         const user = auth.currentUser;
+                         if (user && user.uid === ownerUid) {
+                             try {
+                                 const repairData = {
+                                     email: user.email,
+                                     // Guess auth method or default to unknown if complex
+                                     authMethod: user.providerData.length > 0 ? user.providerData[0].providerId : 'unknown',
+                                     username: user.displayName || user.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0,16),
+                                     emailVerified: user.emailVerified,
+                                     photoURL: user.photoURL || null
+                                 };
+                                 
+                                 // Add createdAt only if missing to avoid overwriting existing timestamp (if any)
+                                 // If doc missing, we need it.
+                                 if (!docSnap.exists() || !docSnap.data().createdAt) {
+                                     repairData.createdAt = serverTimestamp();
+                                 }
+
+                                 await setDoc(doc(db, "users", ownerUid), repairData, { merge: true });
+                                 console.log("User document auto-repaired.");
+                                 // The snapshot listener will fire again with the fix, so we return here to avoid double processing UI
+                                 return; 
+                             } catch (err) {
+                                 console.error("Auto-repair failed:", err);
+                                 showIntegrityAlert(missingFields);
+                             }
+                         } else {
+                             showIntegrityAlert(missingFields);
+                         }
+                     } else {
+                         hideIntegrityAlert();
+                     }
+                     // --- INTEGRITY CHECK END ---
+
                      if (docSnap.exists()) {
                          const data = docSnap.data();
                          // Merge with existing local data to preserve properties not in basic user doc if any
@@ -1323,6 +1382,40 @@
             } catch (e) {
                 console.error("Error setting up user listener:", e);
                 initAnalytics(db, ownerUid);
+            }
+        }
+
+        function showIntegrityAlert(issues) {
+            let alertBox = document.getElementById('integrity-alert-box');
+            if (!alertBox) {
+                alertBox = document.createElement('div');
+                alertBox.id = 'integrity-alert-box';
+                alertBox.className = 'fixed bottom-4 right-4 bg-red-900/90 border border-red-500/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-4 z-[10000] backdrop-blur-md transition-all duration-300 transform translate-y-20 opacity-0';
+                alertBox.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-triangle-exclamation text-red-400 text-xl"></i>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-sm">Account Sync Error</span>
+                            <span class="text-xs text-gray-300">Your account data is incomplete.</span>
+                        </div>
+                    </div>
+                    <a href="https://4sp-organization.github.io/connection.html" target="_blank" class="bg-white/10 hover:bg-white/20 text-white text-xs font-medium py-2 px-4 rounded-lg transition border border-white/10 whitespace-nowrap">
+                        Redirect <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </a>
+                `;
+                document.body.appendChild(alertBox);
+                // Animate in
+                setTimeout(() => {
+                    alertBox.classList.remove('translate-y-20', 'opacity-0');
+                }, 100);
+            }
+        }
+
+        function hideIntegrityAlert() {
+            const alertBox = document.getElementById('integrity-alert-box');
+            if (alertBox) {
+                alertBox.classList.add('translate-y-20', 'opacity-0');
+                setTimeout(() => alertBox.remove(), 300);
             }
         }
         
